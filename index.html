@@ -200,6 +200,8 @@
   .dbrow .info .nm{font-weight:600}
   .dbrow .info .sub{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .lvl{font-size:10.5px;font-weight:700;color:var(--red-ink);background:var(--red-soft);border:1px solid #f2ccd3;border-radius:999px;padding:1px 8px;white-space:nowrap}
+  .role{font-size:10px;font-weight:700;color:var(--muted);background:var(--line-soft);border-radius:999px;padding:1px 7px;margin-left:7px;vertical-align:1px}
+  .role.head{color:#fff;background:var(--ink)}
   .enroll-check{width:20px;height:20px;border:1.5px solid var(--line);border-radius:6px;display:grid;place-items:center;color:#fff;cursor:pointer;flex:0 0 auto}
   .enroll-check.on{background:var(--go);border-color:var(--go)}
   .avatar.chip{width:20px;height:20px;font-size:10px;margin-right:-2px}
@@ -539,8 +541,18 @@
                 <label class="fld"><span>Mobile phone</span><input type="text" id="refPhone" placeholder="+49 …"></label>
               </div>
               <div class="grid2">
-                <label class="fld"><span>Email</span><input type="text" id="refEmail" placeholder="name@mail.de"></label>
+                <label class="fld"><span>Email <span style="font-weight:400;color:var(--muted)">(= login email for their role)</span></span><input type="text" id="refEmail" placeholder="name@mail.de"></label>
+                <label class="fld"><span>Role / office</span>
+                  <select id="refRole">
+                    <option value="">— none (read-only) —</option>
+                    <option value="referee">Referee</option>
+                    <option value="head">Head referee (may assign)</option>
+                  </select>
+                </label>
+              </div>
+              <div class="grid2">
                 <label class="fld"><span>Note (optional)</span><input type="text" id="refNote" placeholder="free text"></label>
+                <div></div>
               </div>
               <div class="row-inline">
                 <button class="btn sm" id="btnSaveRef">Add to database</button>
@@ -645,6 +657,9 @@
    ------------------------------------------------------------ */
 const EMBEDDED_SUPABASE = { url:'', key:'' };
 
+/* Vollzugriff nur für diese E-Mail (muss der Supabase-Login-Adresse entsprechen). */
+const ADMIN_EMAIL = 'michael.gaede@dsqv.de';
+
 /* Standardmäßig ist nur die BEARBEITUNG (App) durch Login geschützt; der
    geteilte Nur-Lese-Link (?view=1) bleibt offen, damit der Oberschiedsrichter
    ihn verteilen kann. Auf true setzen, wenn auch der Ansichts-Link Login verlangt. */
@@ -690,7 +705,7 @@ function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('sh
    Datenmodell: events, referees (Stamm), event_referees (Zuordnung),
    matches (mit event_id), assignments.
    ============================================================ */
-const REF_FIELDS = ['name','location','level','phone','email','photo','note','active'];
+const REF_FIELDS = ['name','location','level','phone','email','role','photo','note','active'];
 function cleanRef(r){ const o={}; REF_FIELDS.forEach(f=>{ if(r[f]!==undefined) o[f]=r[f]; }); return o; }
 
 const store = {
@@ -1001,8 +1016,10 @@ function renderPlan(){
 function matchCard(m){
   const asg = state.assignments[m.id]||[];
   const alt = /^SBC/i.test(m.court);
-  const chips = asg.map(rid=>`<span class="refchip">${esc(refName(rid))}<button data-unassign="${m.id}|${rid}" title="Entfernen">×</button></span>`).join('');
+  const editable = canAssign();
+  const chips = asg.map(rid=>`<span class="refchip">${esc(refName(rid))}${editable?`<button data-unassign="${m.id}|${rid}" title="Remove">×</button>`:''}</span>`).join('');
   const noneWarn = asg.length===0 ? `<span class="none-ref">no referee</span>` : '';
+  const adder = editable ? `<div class="picker"><button class="addref" data-pick="${m.id}">+ assign</button></div>` : '';
   return `<div class="match">
     <div class="mhead">
       <span class="court${alt?' alt':''}">${esc(m.court||'—')}</span>
@@ -1015,9 +1032,7 @@ function matchCard(m){
     </div>
     <div class="refs">
       ${chips}${noneWarn}
-      <div class="picker">
-        <button class="addref" data-pick="${m.id}">+ assign</button>
-      </div>
+      ${adder}
     </div>
   </div>`;
 }
@@ -1356,13 +1371,14 @@ function downscaleImage(file, max=256){
 let refEdit={ id:null, photo:'' };
 function refFormRead(){ return {
   name:$('#refName').value.trim(), location:$('#refLocation').value.trim(), level:$('#refLevel').value.trim(),
-  phone:$('#refPhone').value.trim(), email:$('#refEmail').value.trim(), note:$('#refNote').value.trim(), photo:refEdit.photo||'' }; }
-function refFormClear(){ ['refName','refLocation','refLevel','refPhone','refEmail','refNote'].forEach(id=>$('#'+id).value='');
+  phone:$('#refPhone').value.trim(), email:$('#refEmail').value.trim(), role:$('#refRole').value,
+  note:$('#refNote').value.trim(), photo:refEdit.photo||'' }; }
+function refFormClear(){ ['refName','refLocation','refLevel','refPhone','refEmail','refNote'].forEach(id=>$('#'+id).value=''); $('#refRole').value='';
   refEdit={id:null,photo:''}; syncPhotoPrev(); $('#btnSaveRef').textContent='Add to database';
   $('#btnCancelRefEdit').style.display='none'; $('#refEditHint').textContent=''; }
 function refFormFill(r){ refEdit={id:r.id,photo:r.photo||''};
   $('#refName').value=r.name||''; $('#refLocation').value=r.location||''; $('#refLevel').value=r.level||'';
-  $('#refPhone').value=r.phone||''; $('#refEmail').value=r.email||''; $('#refNote').value=r.note||'';
+  $('#refPhone').value=r.phone||''; $('#refEmail').value=r.email||''; $('#refRole').value=r.role||''; $('#refNote').value=r.note||'';
   syncPhotoPrev(); $('#btnSaveRef').textContent='Save changes'; $('#btnCancelRefEdit').style.display='inline-flex';
   $('#refEditHint').textContent='Editing: '+(r.name||''); }
 function syncPhotoPrev(){ const p=$('#refPhotoPrev');
@@ -1376,9 +1392,10 @@ function renderRefs(){
   if(q) list=list.filter(r=>[r.name,r.location,r.level,r.email,r.phone].some(v=>(v||'').toLowerCase().includes(q)));
   $('#refList').innerHTML = list.length ? list.map(r=>{
     const sub=[r.location, r.phone, r.email].filter(Boolean).join(' · ');
+    const roleBadge = r.role==='head' ? `<span class="role head">Head ref</span>` : (r.role==='referee'?`<span class="role">Referee</span>`:'');
     return `<div class="dbrow">
       ${avatar(r,'sm')}
-      <div class="info"><div class="nm">${esc(r.name)}</div>${sub?`<div class="sub">${esc(sub)}</div>`:''}</div>
+      <div class="info"><div class="nm">${esc(r.name)}${roleBadge}</div>${sub?`<div class="sub">${esc(sub)}</div>`:''}</div>
       ${r.level?`<span class="lvl">${esc(r.level)}</span>`:''}
       <button class="icon" data-edit-ref="${r.id}" title="Edit">✎</button>
       <button class="icon" data-del-ref="${r.id}" title="Delete">🗑</button>
@@ -1490,11 +1507,15 @@ alter table referees  add column if not exists level    text default '';
 alter table referees  add column if not exists phone    text default '';
 alter table referees  add column if not exists email    text default '';
 alter table referees  add column if not exists photo    text default '';
+alter table referees  add column if not exists role     text default '';   -- '', 'referee', 'head'
 
 -- ============================================================
--- Row Level Security with Supabase Auth
--- Model A (default, recommended): READ open (so the shared read-only
--- link works), WRITE only for signed-in users.
+-- Row Level Security with roles
+--   admin (ADMIN_EMAIL)                -> full write on everything
+--   head referee (referees.role='head') -> may write assignments only
+--   everyone signed in / anon          -> read only
+-- READ stays open so the shared read-only link keeps working.
+-- IMPORTANT: keep this admin email identical to ADMIN_EMAIL in the HTML.
 -- ============================================================
 alter table events         enable row level security;
 alter table referees       enable row level security;
@@ -1502,29 +1523,57 @@ alter table event_referees enable row level security;
 alter table matches        enable row level security;
 alter table assignments    enable row level security;
 
--- remove the open policies from the first version (if present)
-drop policy if exists "anon all referees"   on referees;
-drop policy if exists "anon all matches"     on matches;
-drop policy if exists "anon all assignments" on assignments;
-
+-- remove older policies (any version)
 do $$
 declare t text;
 begin
   foreach t in array array['events','referees','event_referees','matches','assignments'] loop
     execute format('drop policy if exists "read all" on %I', t);
     execute format('drop policy if exists "write authenticated" on %I', t);
+    execute format('drop policy if exists "admin write" on %I', t);
     execute format('create policy "read all" on %I for select using (true)', t);
-    execute format('create policy "write authenticated" on %I for all to authenticated using (true) with check (true)', t);
   end loop;
 end $$;
+drop policy if exists "anon all referees"   on referees;
+drop policy if exists "anon all matches"     on matches;
+drop policy if exists "anon all assignments" on assignments;
+drop policy if exists "assign write" on assignments;
+
+-- admin-only write on structural tables
+do $$
+declare t text;
+begin
+  foreach t in array array['events','referees','event_referees','matches'] loop
+    execute format($f$create policy "admin write" on %I for all to authenticated
+      using (lower(auth.jwt()->>'email') = 'michael.gaede@dsqv.de')
+      with check (lower(auth.jwt()->>'email') = 'michael.gaede@dsqv.de')$f$, t);
+  end loop;
+end $$;
+
+-- assignments: admin OR a head referee (matched by their login email)
+create policy "assign write" on assignments for all to authenticated
+  using (
+    lower(auth.jwt()->>'email') = 'michael.gaede@dsqv.de'
+    or lower(auth.jwt()->>'email') in (
+      select lower(email) from referees where role = 'head' and coalesce(email,'') <> ''
+    )
+  )
+  with check (
+    lower(auth.jwt()->>'email') = 'michael.gaede@dsqv.de'
+    or lower(auth.jwt()->>'email') in (
+      select lower(email) from referees where role = 'head' and coalesce(email,'') <> ''
+    )
+  );
 
 -- ------------------------------------------------------------
 -- Model B (fully locked): READ only for signed-in users too.
 -- Then set  VIEW_REQUIRES_LOGIN = true  in the HTML, otherwise the
--- shared view link shows nothing. Replace the read policy above with:
+-- shared view link shows nothing. Replace each "read all" policy with:
 --   create policy "read authenticated" on <table> for select to authenticated using (true);
 -- ------------------------------------------------------------
 
+-- Roles: give a referee the head/referee office in the app (Settings ->
+-- Referee database). Their login email MUST equal the referee's email.
 -- Add users: Supabase dashboard -> Authentication -> Users -> "Add user".
 -- Prevent self sign-up: Authentication -> Providers -> Email ->
 -- turn off "Allow new users to sign up".`;
@@ -1662,7 +1711,39 @@ async function doSignOut(){
   state.user=null; updateUserChip(); showGate();
 }
 
-function renderAll(){ renderEventSwitch(); renderEvents(); renderPlan(); renderRefs(); renderBoard(); renderCourtPlan(); }
+/* ============================================================
+   ROLES & PERMISSIONS
+   admin  = ADMIN_EMAIL           -> everything
+   head   = referee with role 'head' (matched by login email) -> may assign
+   referee/viewer                 -> read only
+   In local mode (no Supabase) everything is admin, for offline setup.
+   ============================================================ */
+function currentRole(){
+  if(state.backend!=='supabase') return 'admin';   // offline/local = full access
+  if(VIEW_ONLY) return 'viewer';
+  if(!state.user) return 'viewer';
+  const email=(state.user.email||'').toLowerCase();
+  if(email===ADMIN_EMAIL.toLowerCase()) return 'admin';
+  const r=state.referees.find(x=>(x.email||'').toLowerCase()===email && x.email);
+  if(r && r.role==='head') return 'head';
+  return r ? 'referee' : 'viewer';
+}
+function canManage(){ return currentRole()==='admin'; }           // settings, import, events, DB
+function canAssign(){ const r=currentRole(); return r==='admin'||r==='head'; }
+function applyRole(){
+  const manage=canManage(), assign=canAssign();
+  const setTab=(v,show)=>{ const b=$(`#tabs button[data-view="${v}"]`); if(b) b.style.display=show?'':'none'; };
+  setTab('plan', assign);          // Assign view = editing surface
+  setTab('import', manage);
+  setTab('settings', manage);
+  // board & courts stay visible to everyone
+  document.body.classList.toggle('can-assign', assign);
+  // if the active tab is now hidden, fall back to the board
+  const active=$('#tabs button.active');
+  if(active && active.style.display==='none') switchView('board');
+}
+
+function renderAll(){ renderEventSwitch(); renderEvents(); renderPlan(); renderRefs(); renderBoard(); renderCourtPlan(); applyRole(); }
 
 async function selectEvent(id){
   state.curEvent=id;
@@ -1854,9 +1935,10 @@ function enterViewOnly(){
   $('nav.tabs').style.display='none';
   $('#beacon').style.display='none';
   $('#btnShare').style.display='none';           // im geteilten Link nicht nötig
+  const es=$('#eventSwitch'); if(es) es.style.display='none';
   switchView('board');
   // live: alle 30s neu laden
-  setInterval(async ()=>{ try{ await store.loadAll(); renderBoard(); }catch(e){} }, 30000);
+  setInterval(async ()=>{ try{ await store.loadEventData(); renderBoard(); }catch(e){} }, 30000);
 }
 
 /* ---- auth events ---- */
