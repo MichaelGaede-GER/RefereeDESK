@@ -235,29 +235,34 @@
   .linkrow input{font-size:13px}
   .modal .close{float:right;border:0;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
 
-  /* ---- print / PDF (kompakt, max. wenige A4-Seiten) ---- */
+  /* ---- print / PDF ---- */
   @media print{
-    @page{size:A4 portrait;margin:8mm}
+    @page{size:A4 portrait;margin:10mm}
     html,body{background:#fff!important}
     body>*{display:none!important}          /* alles ausblenden … */
     #printArea{display:block!important}      /* … außer dem Druck-Dokument */
+    #printArea table.cplan thead th{ -webkit-print-color-adjust:exact; print-color-adjust:exact }
+    .pb-c,.cp-cell .sr .rn{ -webkit-print-color-adjust:exact; print-color-adjust:exact }
   }
-  #printArea{display:none;color:#111;font-size:9px}
-  .pr-head{border-bottom:2px solid var(--red);padding-bottom:5px;margin-bottom:7px}
-  .pr-head h1{font-family:var(--disp);font-weight:800;font-size:16px}
-  .pr-head .m{color:#555;font-size:9.5px;margin-top:1px}
-  .pr-list{column-count:2;column-gap:8mm}
-  @media print and (min-width:0){ .pr-list.cols3{column-count:3} }
-  .pr-time{font-family:var(--disp);font-weight:800;font-size:11px;margin:6px 0 2px;padding-bottom:1px;border-bottom:1px solid #bbb;break-after:avoid;break-inside:avoid}
-  .pr-time:first-child{margin-top:0}
-  .pr-m{break-inside:avoid;padding:1.5px 0;border-bottom:1px solid #eee;line-height:1.3}
-  .pr-row{display:flex;gap:5px;align-items:baseline}
-  .pr-c{font-weight:800;min-width:30px}
-  .pr-t{flex:1}
-  .pr-g{color:#777;font-size:8px;white-space:nowrap}
-  .pr-sr{margin-left:35px;color:#111}
-  .pr-sr.empty{color:#c8102e}
-  .pr-sr .lb{color:#777}
+  #printArea{display:none;color:#111}
+
+  /* board-style print: one column, grouped by time, one page per day */
+  .pb-page{font-size:11px}
+  .pb-head{border-bottom:2px solid var(--red);padding-bottom:6px;margin-bottom:10px}
+  .pb-head h1{font-family:var(--disp);font-weight:800;font-size:18px}
+  .pb-head .m{color:#555;font-size:11px;margin-top:2px}
+  .pb-time{font-family:var(--disp);font-weight:800;font-size:15px;margin:12px 0 5px;padding-bottom:2px;border-bottom:1px solid #bbb;break-after:avoid;break-inside:avoid}
+  .pb-m{break-inside:avoid;padding:5px 0;border-bottom:1px solid #eee}
+  .pb-line{display:flex;gap:9px;align-items:baseline}
+  .pb-c{font-family:var(--disp);font-weight:800;color:#fff;background:var(--red);border-radius:5px;padding:2px 7px;min-width:30px;text-align:center;font-size:11px}
+  .pb-c.alt{background:#14161a}
+  .pb-t{flex:1;font-size:12.5px}
+  .pb-t .vs{font-weight:600;color:#888;font-size:11px}
+  .pb-t .sd{color:#888;font-weight:500;font-size:.85em}
+  .pb-sub{display:block;color:#777;font-size:10px;font-weight:400;margin-top:1px}
+  .pb-ref{margin:2px 0 0 39px;font-size:11.5px}
+  .pb-ref .lb{color:#777;font-weight:600}
+  .pb-ref.empty{color:#c8102e}
 
   /* ---- court plan (grid) ---- */
   .courtplan-scroll{overflow-x:auto}
@@ -266,11 +271,15 @@
   table.cplan thead th{background:var(--ink);color:#fff;font-family:var(--disp);font-weight:700;font-size:13px;padding:7px 8px;text-align:center;position:sticky;top:0}
   table.cplan thead th.tcol{background:var(--red);width:58px}
   table.cplan td.tcell{background:var(--line-soft);font-family:var(--disp);font-weight:800;text-align:center;font-size:14px;color:var(--ink);width:58px}
-  .cp-cell{padding:6px 8px;min-width:150px}
-  .cp-cell .tm{font-family:var(--disp);font-weight:700;font-size:12.5px;line-height:1.25}
-  .cp-cell .gp{color:var(--muted);font-size:10.5px;margin-top:1px}
-  .cp-cell .sr{margin-top:4px;display:flex;flex-wrap:wrap;gap:3px}
-  .cp-cell .sr .t{background:var(--go-soft);color:var(--go-ink);border:1px solid #cbe8da;border-radius:999px;padding:1px 7px;font-size:10.5px;font-weight:600}
+  .cp-cell{padding:6px 8px;min-width:150px;text-align:center}
+  .cp-cell .tm{font-family:var(--disp);font-weight:700;font-size:12px;line-height:1.25}
+  .cp-cell .tm .side{}
+  .cp-cell .tm .vs{font-family:var(--body);font-weight:600;color:var(--muted);font-size:10.5px;margin:1px 0}
+  .cp-cell .tm .sd{color:var(--muted);font-weight:500;font-size:.82em}
+  .cp-cell .gp{color:var(--muted);font-size:10px;margin-top:2px}
+  .cp-cell .sr{margin-top:5px}
+  .cp-cell .sr .lb{font-weight:700;font-size:10px;color:var(--ink)}
+  .cp-cell .sr .rn{font-size:11px;color:var(--go-ink);font-weight:600;line-height:1.3}
   .cp-cell .sr .none{color:var(--red);font-size:10.5px;font-weight:600}
   .cp-empty{min-height:20px}
 
@@ -279,10 +288,10 @@
   #printArea.landscape{ page:cplan }
   #printArea .cp-print{font-size:8.5px}
   #printArea table.cplan{min-width:0}
-  #printArea table.cplan thead th{background:#111!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #printArea table.cplan thead th{background:#111!important}
   #printArea table.cplan thead th.tcol,#printArea table.cplan td.tcell{background:#eee!important}
   #printArea .cp-cell{min-width:0;padding:3px 4px}
-  #printArea .cp-cell .sr .t{background:#eef7f1!important;border-color:#cbe8da}
+  #printArea .cp-cell .sr .rn{font-size:9px}
 </style>
 </head>
 <body>
@@ -1053,20 +1062,24 @@ function openPicker(matchId, anchorBtn){
     const [mid,rid]=tg.dataset.toggle.split('|');
     toggleAssign(mid,rid);
   });
-  // position fixed relative to the button, kept inside the viewport
+  // position fixed relative to the button, kept inside the viewport, and sized to fit (scrollable)
   const r=anchorBtn.getBoundingClientRect();
-  const mw=menu.offsetWidth, mh=menu.offsetHeight;
-  let left=r.left, top=r.bottom+6;
-  if(left+mw > window.innerWidth-8) left=Math.max(8, window.innerWidth-mw-8);
-  if(top+mh > window.innerHeight-8) top=Math.max(8, r.top-mh-6);
-  menu.style.left=left+'px'; menu.style.top=top+'px';
+  const mw=menu.offsetWidth;
+  let left=r.left; if(left+mw > window.innerWidth-8) left=Math.max(8, window.innerWidth-mw-8);
+  const spaceBelow=window.innerHeight-r.bottom-12, spaceAbove=r.top-12;
+  const below = spaceBelow>=180 || spaceBelow>=spaceAbove;   // open where there is more room
+  const avail = Math.max(160, (below?spaceBelow:spaceAbove));
+  menu.style.maxHeight=Math.min(360,avail)+'px';
+  menu.style.left=left+'px';
+  if(below){ menu.style.top=(r.bottom+6)+'px'; }
+  else { menu.style.top=Math.max(8, r.top-6-menu.offsetHeight)+'px'; }
   const search=$('#__pickerSearch');
   search.addEventListener('input',()=>{ $('#__pickerList').innerHTML=pickerBody(matchId, search.value); });
   search.focus();
-  setTimeout(()=>{ document.addEventListener('click',outsideClose); window.addEventListener('resize',closePicker); window.addEventListener('scroll',closePicker,true); },0);
+  setTimeout(()=>{ document.addEventListener('click',outsideClose); window.addEventListener('resize',closePicker); },0);
 }
 function closePicker(){ const m=$('#__menu'); if(m) m.remove(); pickerMatchId=null;
-  document.removeEventListener('click',outsideClose); window.removeEventListener('resize',closePicker); window.removeEventListener('scroll',closePicker,true); }
+  document.removeEventListener('click',outsideClose); window.removeEventListener('resize',closePicker); }
 function outsideClose(e){ if(!e.target.closest('#__menu') && !e.target.closest('[data-pick]')) closePicker(); }
 
 function renderSidePanel(ms){
@@ -1155,38 +1168,46 @@ function renderBoard(){
   $('#boardList').innerHTML = html || `<p class="empty-note">No matches${cur?` for ${esc(cur)}`:''} on this day.</p>`;
 }
 
-/* ---- PDF / print document — kompakt, mehrspaltig, wenige A4-Seiten ---- */
+/* ---- PDF / print — looks like the board: one column, grouped by time, one page per day ---- */
 function buildPrintDoc(){
-  const date=state.boardDate; const cur=state.refFilter||'';
+  const cur=state.refFilter||'';
   const filterId = cur ? refIdByName(cur) : null;
-  const ts=timesFor(date);
-  let body='', count=0;
-  ts.forEach(t=>{
-    let ms=matchesAt(date,t);
-    if(filterId!=null) ms=ms.filter(m=>(state.assignments[m.id]||[]).includes(filterId));
-    if(!ms.length) return;
-    body += `<div class="pr-time">${esc(t)}</div>`;
-    ms.forEach(m=>{
-      count++;
-      const asg=(state.assignments[m.id]||[]).map(refName);
-      const sr = asg.length
-        ? `<div class="pr-sr"><span class="lb">Ref:</span> ${esc(asg.join(', '))}</div>`
-        : `<div class="pr-sr empty"><span class="lb">Ref:</span> not assigned</div>`;
-      const g = m.grp ? `<span class="pr-g">${esc(m.grp)}</span>` : '';
-      body += `<div class="pr-m">
-        <div class="pr-row"><span class="pr-c">${esc(m.court||'')}</span>
-          <span class="pr-t">${esc(m.home_team)} – ${esc(m.away_team)}</span>${g}</div>
-        ${sr}</div>`;
+  const ev=curEventObj();
+  const ds=dates();
+  let pages='';
+  ds.forEach((date,di)=>{
+    const ts=timesFor(date);
+    let body='', count=0;
+    ts.forEach(t=>{
+      let ms=matchesAt(date,t);
+      if(filterId!=null) ms=ms.filter(m=>(state.assignments[m.id]||[]).includes(filterId));
+      if(!ms.length) return;
+      body += `<div class="pb-time">${esc(t)}</div>`;
+      ms.forEach(m=>{
+        count++;
+        const asg=(state.assignments[m.id]||[]).map(refName);
+        const alt=/^SBC/i.test(m.court);
+        const sr = asg.length
+          ? `<div class="pb-ref"><span class="lb">Referee:</span> ${esc(asg.join(', '))}</div>`
+          : `<div class="pb-ref empty"><span class="lb">Referee:</span> not assigned</div>`;
+        const sub=[m.event,m.grp,m.venue].filter(Boolean).join(' · ');
+        const seed=s=>s?`<span class="sd"> [${esc(s)}]</span>`:'';
+        body += `<div class="pb-m">
+          <div class="pb-line"><span class="pb-c${alt?' alt':''}">${esc(m.court||'')}</span>
+            <span class="pb-t"><b>${esc(m.home_team)}${seed(m.home_seed)} <span class="vs">vs</span> ${esc(m.away_team)}${seed(m.away_seed)}</b>${sub?`<span class="pb-sub">${esc(sub)}</span>`:''}</span></div>
+          ${sr}</div>`;
+      });
     });
+    if(!body) return;
+    const title = cur ? `Referee schedule – ${esc(cur)}` : 'Referee schedule';
+    pages += `<section class="pb-page"${di>0?' style="break-before:page"':''}>
+      <div class="pb-head"><h1>${title}${ev?` · ${esc(ev.name)}`:''}</h1>
+        <div class="m">${esc(date)} · ${count} match${count===1?'':'es'}</div></div>
+      ${body}</section>`;
   });
-  // mehr Begegnungen -> 3 Spalten, damit alles auf wenige Seiten passt
-  const cols = count>60 ? ' cols3' : '';
-  const sub = cur ? `Referee schedule – only ${esc(cur)}` : 'Referee schedule';
-  $('#printArea').innerHTML = `<div class="pr-head"><h1>${sub}</h1>
-    <div class="m">Day ${esc(date)} · ${count} match${count===1?'':'es'} · as of ${new Date().toLocaleString('en-GB')}</div></div>
-    <div class="pr-list${cols}">${body||'<p>No matches.</p>'}</div>`;
+  $('#printArea').innerHTML = pages || '<p>No matches.</p>';
 }
-function doPrint(){ buildPrintDoc(); $('#printArea').className=''; window.print(); }
+function doPrint(){ buildPrintDoc(); $('#printArea').className='board'; window.print(); }
 
 /* ============================================================
    COURT PLAN (grid: times × courts)
@@ -1202,11 +1223,15 @@ function courtCellHTML(m){
   if(!m) return `<div class="cp-cell cp-empty"></div>`;
   const asg=(state.assignments[m.id]||[]).map(refName);
   const sr = asg.length
-    ? `<div class="sr">${asg.map(n=>`<span class="t">${esc(n)}</span>`).join('')}</div>`
-    : `<div class="sr"><span class="none">– no ref</span></div>`;
-  const seed = s => s?`<span style="color:var(--muted);font-weight:500;font-size:.8em"> [${esc(s)}]</span>`:'';
+    ? `<div class="sr"><div class="lb">Referee:</div>${asg.map(n=>`<div class="rn">${esc(n)}</div>`).join('')}</div>`
+    : `<div class="sr"><div class="lb">Referee:</div><div class="none">– not assigned</div></div>`;
+  const seed = s => s?`<span class="sd"> [${esc(s)}]</span>`:'';
   return `<div class="cp-cell">
-    <div class="tm">${esc(m.home_team)}${seed(m.home_seed)}<br>${esc(m.away_team)}${seed(m.away_seed)}</div>
+    <div class="tm">
+      <div class="side">${esc(m.home_team)}${seed(m.home_seed)}</div>
+      <div class="vs">vs.</div>
+      <div class="side">${esc(m.away_team)}${seed(m.away_seed)}</div>
+    </div>
     ${m.grp?`<div class="gp">${esc([m.event,m.grp].filter(Boolean).join(' · '))}</div>`:''}
     ${sr}</div>`;
 }
