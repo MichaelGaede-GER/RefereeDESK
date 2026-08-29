@@ -165,6 +165,19 @@
   .file-drop{border:1.5px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);background:var(--line-soft)}
   .file-drop:hover{border-color:var(--red)}
 
+  /* ---- auth ---- */
+  .userchip{display:flex;align-items:center;gap:9px;white-space:nowrap}
+  .userchip .who{font-size:12.5px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis}
+  .gate{position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,#f3f4f6,#e7e9ee);display:flex;align-items:center;justify-content:center;padding:20px}
+  .gate-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 60px rgba(20,22,26,.18);width:100%;max-width:380px;padding:26px 26px 22px}
+  .gate-card h2{font-family:var(--disp);font-weight:800;font-size:24px;text-align:center;margin-top:6px}
+  .gate-card .sub{color:var(--muted);font-size:13px;text-align:center;margin:4px 0 18px}
+  .gate-err{color:var(--red-ink);font-size:13px;min-height:18px;margin:2px 0 8px}
+  .gate-err.ok{color:var(--go-ink)}
+  .gate-note{color:var(--muted);font-size:11.5px;text-align:center;margin-top:16px;line-height:1.5}
+  .account-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .account-row .em{font-weight:600}
+
   /* ---- board (Ansicht) ---- */
   .board-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
   .board-bar .grow{flex:1;min-width:180px}
@@ -231,8 +244,51 @@
       <button data-view="settings">Einstellungen</button>
     </nav>
     <div class="beacon" id="beacon"><span class="led"></span><span id="beaconTxt">…</span></div>
+    <div class="userchip" id="userChip" style="display:none">
+      <span class="who" id="userEmail"></span>
+      <button class="btn ghost sm" id="btnSignOut">Abmelden</button>
+    </div>
   </div>
 </header>
+
+<!-- ===== LOGIN-GATE ===== -->
+<div class="gate" id="gate" style="display:none">
+  <div class="gate-card">
+    <div class="brand" style="justify-content:center;margin-bottom:6px">
+      <div class="ball"></div><div><b>Referee Desk</b><span>Schiedsrichter-Einteilung</span></div>
+    </div>
+    <h2 id="gateTitle">Anmelden</h2>
+    <p class="sub" id="gateSub">Zugang nur für registrierte Personen.</p>
+
+    <div id="loginForm">
+      <label class="fld"><span>E-Mail</span><input type="email" id="loginEmail" autocomplete="username" placeholder="name@verein.de"></label>
+      <label class="fld"><span>Passwort</span><input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••"></label>
+      <p class="gate-err" id="loginErr"></p>
+      <button class="btn red" id="btnLogin" style="width:100%">Anmelden</button>
+      <button class="btn ghost sm" id="btnForgot" style="width:100%;margin-top:8px">Passwort vergessen?</button>
+    </div>
+
+    <div id="resetForm" style="display:none">
+      <label class="fld"><span>E-Mail für Zurücksetzen</span><input type="email" id="resetEmail" placeholder="name@verein.de"></label>
+      <p class="gate-err" id="resetMsg"></p>
+      <button class="btn" id="btnSendReset" style="width:100%">Reset-Link senden</button>
+      <button class="btn ghost sm" id="btnBackLogin" style="width:100%;margin-top:8px">Zurück</button>
+    </div>
+
+    <p class="gate-note" id="gateNote"></p>
+  </div>
+</div>
+
+<!-- ===== NEUES PASSWORT (Recovery) ===== -->
+<div class="modal-bg" id="recoveryModal">
+  <div class="modal" style="max-width:420px">
+    <h3>Neues Passwort setzen</h3>
+    <p class="sub">Du hast einen Reset-Link geöffnet. Vergib jetzt ein neues Passwort.</p>
+    <label class="fld"><span>Neues Passwort</span><input type="password" id="newPass" placeholder="mind. 6 Zeichen"></label>
+    <p class="gate-err" id="recoveryMsg"></p>
+    <button class="btn red" id="btnSetPass" style="width:100%">Passwort speichern</button>
+  </div>
+</div>
 
 <main>
   <!-- ============ PLAN ============ -->
@@ -394,6 +450,14 @@
         </div>
       </div>
 
+      <div class="card" id="accountCard" style="display:none">
+        <div class="ch"><h3>Konto &amp; Zugang</h3></div>
+        <div class="cb">
+          <div class="account-row" id="accountRow"></div>
+          <p class="hint">Benutzer werden in Supabase verwaltet (Authentication → Users). Damit sich niemand selbst registrieren kann, in Supabase unter Auth → Providers → Email die Option „Allow new users to sign up" deaktivieren und Personen manuell anlegen.</p>
+        </div>
+      </div>
+
       <div class="card">
         <div class="ch"><h3>Wartung</h3></div>
         <div class="cb row-inline">
@@ -440,6 +504,11 @@
    ------------------------------------------------------------ */
 const EMBEDDED_SUPABASE = { url:'', key:'' };
 
+/* Standardmäßig ist nur die BEARBEITUNG (App) durch Login geschützt; der
+   geteilte Nur-Lese-Link (?view=1) bleibt offen, damit der Oberschiedsrichter
+   ihn verteilen kann. Auf true setzen, wenn auch der Ansichts-Link Login verlangt. */
+const VIEW_REQUIRES_LOGIN = false;
+
 const $  = (s,r=document)=>r.querySelector(s);
 const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
 const uid = ()=> (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+Math.random().toString(16).slice(2));
@@ -454,7 +523,7 @@ const VIEW_ONLY = params.get('view')==='1';           // reiner Ansichtsmodus (g
 const URL_REF   = params.get('ref') ? decodeURIComponent(params.get('ref')) : '';
 
 const state = {
-  backend:'local', supa:null, connected:false,
+  backend:'local', supa:null, connected:false, user:null, supaUrl:'',
   referees:[], matches:[], assignments:{},   // matchId -> [refId...]
   selDate:null, selTime:null, parsed:[],
   boardDate:null, refFilter:URL_REF
@@ -951,15 +1020,42 @@ create table if not exists assignments (
   primary key (match_id, referee_id)
 );
 
--- RLS: offener Zugriff über den Anon-Key (kleines internes Tool).
--- Für strengeren Schutz Policies anpassen oder Supabase-Auth ergänzen.
-alter table referees   enable row level security;
-alter table matches    enable row level security;
+-- ============================================================
+-- RLS / Zugriffsschutz mit Supabase-Auth
+-- Modell A (Standard, empfohlen): LESEN für alle (damit der geteilte
+-- Nur-Lese-Link funktioniert), SCHREIBEN nur für eingeloggte Benutzer.
+-- ============================================================
+alter table referees    enable row level security;
+alter table matches     enable row level security;
 alter table assignments enable row level security;
 
-create policy "anon all referees"   on referees   for all using (true) with check (true);
-create policy "anon all matches"     on matches    for all using (true) with check (true);
-create policy "anon all assignments" on assignments for all using (true) with check (true);`;
+-- alte, offene Policies der ersten Version entfernen (falls vorhanden)
+drop policy if exists "anon all referees"   on referees;
+drop policy if exists "anon all matches"     on matches;
+drop policy if exists "anon all assignments" on assignments;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['referees','matches','assignments'] loop
+    execute format('drop policy if exists "read all" on %I', t);
+    execute format('drop policy if exists "write authenticated" on %I', t);
+    execute format('create policy "read all" on %I for select using (true)', t);
+    execute format('create policy "write authenticated" on %I for all to authenticated using (true) with check (true)', t);
+  end loop;
+end $$;
+
+-- ------------------------------------------------------------
+-- Modell B (komplett abgeriegelt): AUCH Lesen nur für Eingeloggte.
+-- Dann im HTML  VIEW_REQUIRES_LOGIN = true  setzen, sonst zeigt der
+-- Ansichts-Link nichts an. Zum Aktivieren die 3 Zeilen oben durch die
+-- 'read authenticated'-Variante ersetzen:
+--   create policy "read authenticated" on <tabelle> for select to authenticated using (true);
+-- ------------------------------------------------------------
+
+-- Benutzer anlegen: Supabase Dashboard -> Authentication -> Users -> "Add user".
+-- Selbstregistrierung verhindern: Authentication -> Providers -> Email ->
+-- "Allow new users to sign up" deaktivieren.`;
 
 function setBeacon(){
   const label = state.backend==='supabase'
@@ -980,21 +1076,108 @@ function saveCfg(c){ localStorage.setItem(LS.cfg,JSON.stringify(c)); }
 async function connect(cfg,{silent=false}={}){
   if(cfg.backend==='supabase' && cfg.url && cfg.key){
     try{
+      if(!window.supabase) throw new Error('Supabase-Bibliothek nicht geladen');
       state.supa = window.supabase.createClient(cfg.url,cfg.key);
-      state.backend='supabase';
-      await store.loadAll();
-      state.connected=true;
-      if(!silent) toast('Mit Supabase verbunden');
+      state.backend='supabase'; state.supaUrl=cfg.url; state.connected=true;
+      // Auth-Zustand beobachten
+      state.supa.auth.onAuthStateChange((evt,session)=>handleAuth(evt,session));
+      const { data:{ session } } = await state.supa.auth.getSession();
+      state.user = session?.user || null;
+      setBeacon();
+      await afterAuthDecision({silent});
     }catch(e){
       state.connected=false; state.backend='supabase';
       if(!silent) toast('Verbindung fehlgeschlagen: '+(e.message||e));
-      console.error(e);
+      console.error(e); setBeacon();
     }
   } else {
-    state.backend='local'; state.supa=null; state.connected=false;
-    await store.loadAll();
+    state.backend='local'; state.supa=null; state.connected=false; state.user=null;
+    setBeacon(); hideGate();
+    await store.loadAll(); renderAll(); updateUserChip();
+    if(VIEW_ONLY) enterViewOnly();
   }
-  setBeacon(); renderAll();
+}
+
+/* ============================================================
+   AUTH — Supabase
+   ============================================================ */
+function authRequired(){
+  return state.backend==='supabase' && (!VIEW_ONLY || VIEW_REQUIRES_LOGIN);
+}
+async function afterAuthDecision({silent=false}={}){
+  if(authRequired() && !state.user){ showGate(); return; }
+  hideGate();
+  try{ await store.loadAll(); }
+  catch(e){ console.error(e); if(!silent) toast('Laden fehlgeschlagen: '+(e.message||e)); }
+  renderAll(); updateUserChip();
+  if(VIEW_ONLY) enterViewOnly();
+}
+function handleAuth(evt,session){
+  state.user = session?.user || null;
+  updateUserChip();
+  if(evt==='PASSWORD_RECOVERY'){ $('#recoveryModal').classList.add('show'); return; }
+  if(evt==='SIGNED_IN'){ afterAuthDecision(); }
+  if(evt==='SIGNED_OUT'){ showGate(); }
+}
+function showGate(){
+  $('#gate').style.display='flex';
+  $('#gateNote').innerHTML = VIEW_ONLY
+    ? 'Diese Ansicht ist geschützt. Bitte anmelden.'
+    : 'Kein Konto? Der Turnier-Administrator legt Zugänge in Supabase an.';
+  setTimeout(()=>{ const el=$('#loginEmail'); if(el) el.focus(); },40);
+}
+function hideGate(){ $('#gate').style.display='none'; }
+function updateUserChip(){
+  const chip=$('#userChip'); const authed = state.backend==='supabase' && state.user;
+  chip.style.display = authed ? 'flex':'none';
+  if(authed) $('#userEmail').textContent = state.user.email||'angemeldet';
+  // Konto-Karte in den Einstellungen
+  const card=$('#accountCard');
+  if(state.backend==='supabase'){
+    card.style.display='block';
+    $('#accountRow').innerHTML = state.user
+      ? `<span class="em">${esc(state.user.email||'angemeldet')}</span>
+         <a class="btn ghost sm" href="${esc(dashUsersUrl())}" target="_blank" rel="noopener">Benutzer verwalten</a>
+         <button class="btn ghost sm" id="btnSignOut2">Abmelden</button>`
+      : `<span class="empty-note">Nicht angemeldet.</span>`;
+  } else {
+    card.style.display='none';
+  }
+}
+function dashUsersUrl(){
+  const m=(state.supaUrl||'').match(/^https:\/\/([a-z0-9]+)\.supabase\.co/i);
+  return m ? `https://supabase.com/dashboard/project/${m[1]}/auth/users` : 'https://supabase.com/dashboard';
+}
+async function doLogin(){
+  const email=$('#loginEmail').value.trim(), pass=$('#loginPass').value;
+  const err=$('#loginErr'); err.textContent=''; err.classList.remove('ok');
+  if(!email||!pass){ err.textContent='Bitte E-Mail und Passwort eingeben.'; return; }
+  if(!state.supa){ err.textContent='Kein Supabase-Zugang konfiguriert.'; return; }
+  const btn=$('#btnLogin'); btn.disabled=true; btn.textContent='Anmelden…';
+  const { error } = await state.supa.auth.signInWithPassword({email,password:pass});
+  btn.disabled=false; btn.textContent='Anmelden';
+  if(error){ err.textContent = /invalid/i.test(error.message)?'E-Mail oder Passwort falsch.':error.message; }
+  // Erfolg -> onAuthStateChange('SIGNED_IN') übernimmt
+}
+async function doSendReset(){
+  const email=$('#resetEmail').value.trim(); const msg=$('#resetMsg'); msg.textContent=''; msg.classList.remove('ok');
+  if(!email){ msg.textContent='Bitte E-Mail eingeben.'; return; }
+  if(!state.supa){ msg.textContent='Kein Supabase-Zugang konfiguriert.'; return; }
+  const { error } = await state.supa.auth.resetPasswordForEmail(email,{ redirectTo: baseUrl() });
+  if(error){ msg.textContent=error.message; }
+  else { msg.classList.add('ok'); msg.textContent='Reset-Link gesendet – bitte E-Mail prüfen.'; }
+}
+async function doSetNewPass(){
+  const p=$('#newPass').value; const msg=$('#recoveryMsg'); msg.textContent=''; msg.classList.remove('ok');
+  if(!p||p.length<6){ msg.textContent='Mindestens 6 Zeichen.'; return; }
+  const { error } = await state.supa.auth.updateUser({ password:p });
+  if(error){ msg.textContent=error.message; return; }
+  $('#recoveryModal').classList.remove('show'); $('#newPass').value='';
+  toast('Passwort aktualisiert'); afterAuthDecision();
+}
+async function doSignOut(){
+  if(state.supa){ try{ await state.supa.auth.signOut(); }catch(e){} }
+  state.user=null; updateUserChip(); showGate();
 }
 
 function renderAll(){ renderPlan(); renderRefs(); renderBoard(); }
@@ -1138,6 +1321,17 @@ function enterViewOnly(){
   setInterval(async ()=>{ try{ await store.loadAll(); renderBoard(); }catch(e){} }, 30000);
 }
 
+/* ---- auth events ---- */
+$('#btnLogin').addEventListener('click',doLogin);
+$('#loginPass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+$('#loginEmail').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#loginPass').focus(); });
+$('#btnForgot').addEventListener('click',()=>{ $('#loginForm').style.display='none'; $('#resetForm').style.display='block'; $('#gateTitle').textContent='Passwort zurücksetzen'; const e=$('#resetEmail'); e.value=$('#loginEmail').value.trim(); e.focus(); });
+$('#btnBackLogin').addEventListener('click',()=>{ $('#resetForm').style.display='none'; $('#loginForm').style.display='block'; $('#gateTitle').textContent='Anmelden'; $('#resetMsg').textContent=''; });
+$('#btnSendReset').addEventListener('click',doSendReset);
+$('#btnSetPass').addEventListener('click',doSetNewPass);
+$('#btnSignOut').addEventListener('click',doSignOut);
+document.addEventListener('click',e=>{ if(e.target && e.target.id==='btnSignOut2') doSignOut(); });
+
 /* ============================================================
    BOOT
    ============================================================ */
@@ -1153,8 +1347,7 @@ function enterViewOnly(){
   $('#supaUrl').value = saved.url||EMBEDDED_SUPABASE.url||'';
   $('#supaKey').value = saved.key||EMBEDDED_SUPABASE.key||'';
 
-  await connect(cfg,{silent:true});
-  if(VIEW_ONLY) enterViewOnly();
+  await connect(cfg,{silent:true});   // handhabt Gate / Ansichtsmodus intern
 })();
 </script>
 </body>
