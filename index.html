@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Schiedsrichter-Einteilung · Squash</title>
+<title>Referee Desk · Squash</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -178,6 +178,32 @@
   .account-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .account-row .em{font-weight:600}
 
+  /* ---- events + referee DB ---- */
+  .event-switch{width:auto;min-width:170px;max-width:280px;padding:7px 10px;border-radius:9px;font-weight:600}
+  .evlist{display:flex;flex-direction:column}
+  .evlist .ev{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+  .evlist .ev:last-child{border-bottom:0}
+  .evlist .ev .nm{font-weight:600}
+  .evlist .ev .meta{color:var(--muted);font-size:12.5px}
+  .evlist .ev .sp{flex:1}
+  .badge-cur{font-size:11px;font-weight:700;color:#fff;background:var(--go);border-radius:999px;padding:2px 9px}
+  .avatar{border-radius:50%;background:var(--line-soft);color:var(--muted);display:grid;place-items:center;font-weight:700;overflow:hidden;flex:0 0 auto;background-size:cover;background-position:center}
+  .avatar.sm{width:34px;height:34px;font-size:13px}
+  .avatar.lg{width:72px;height:72px;font-size:26px;cursor:pointer;border:1px dashed var(--line)}
+  .ref-form{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .ref-photo{display:flex;flex-direction:column;align-items:center;gap:6px;width:84px}
+  .ref-fields{flex:1;min-width:260px}
+  .dblist{display:flex;flex-direction:column;max-height:360px;overflow:auto}
+  .dbrow{display:flex;align-items:center;gap:11px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+  .dbrow:last-child{border-bottom:0}
+  .dbrow .info{min-width:0;flex:1}
+  .dbrow .info .nm{font-weight:600}
+  .dbrow .info .sub{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lvl{font-size:10.5px;font-weight:700;color:var(--red-ink);background:var(--red-soft);border:1px solid #f2ccd3;border-radius:999px;padding:1px 8px;white-space:nowrap}
+  .enroll-check{width:20px;height:20px;border:1.5px solid var(--line);border-radius:6px;display:grid;place-items:center;color:#fff;cursor:pointer;flex:0 0 auto}
+  .enroll-check.on{background:var(--go);border-color:var(--go)}
+  .avatar.chip{width:20px;height:20px;font-size:10px;margin-right:-2px}
+
   /* ---- board (Ansicht) ---- */
   .board-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
   .board-bar .grow{flex:1;min-width:180px}
@@ -209,25 +235,54 @@
   .linkrow input{font-size:13px}
   .modal .close{float:right;border:0;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
 
-  /* ---- print / PDF ---- */
+  /* ---- print / PDF (kompakt, max. wenige A4-Seiten) ---- */
   @media print{
-    header.top,nav.tabs,.board-bar,.beacon,.modal-bg,.toast{display:none!important}
-    body{background:#fff}
-    main{max-width:none;padding:0}
-    #printArea{display:block!important}
+    @page{size:A4 portrait;margin:8mm}
+    html,body{background:#fff!important}
+    body>*{display:none!important}          /* alles ausblenden … */
+    #printArea{display:block!important}      /* … außer dem Druck-Dokument */
   }
-  #printArea{display:none}
-  .pr-head{border-bottom:2px solid var(--red);padding-bottom:8px;margin-bottom:14px}
-  .pr-head h1{font-family:var(--disp);font-weight:800;font-size:22px}
-  .pr-head .m{color:#555;font-size:12px;margin-top:2px}
-  .pr-time{font-family:var(--disp);font-weight:800;font-size:15px;margin:14px 0 4px;border-bottom:1px solid #ccc;padding-bottom:3px}
-  .pr-m{padding:6px 0;border-bottom:1px solid #eee;break-inside:avoid}
-  .pr-line{display:flex;gap:10px;font-size:13px}
-  .pr-line .c{font-weight:800;min-width:60px}
-  .pr-line .g{color:#666;margin-left:auto;font-size:11px}
-  .pr-refs{font-size:12.5px;margin:2px 0 0 70px;color:#111}
-  .pr-refs.empty{color:#c8102e}
-  .pr-refs .lb{color:#666}
+  #printArea{display:none;color:#111;font-size:9px}
+  .pr-head{border-bottom:2px solid var(--red);padding-bottom:5px;margin-bottom:7px}
+  .pr-head h1{font-family:var(--disp);font-weight:800;font-size:16px}
+  .pr-head .m{color:#555;font-size:9.5px;margin-top:1px}
+  .pr-list{column-count:2;column-gap:8mm}
+  @media print and (min-width:0){ .pr-list.cols3{column-count:3} }
+  .pr-time{font-family:var(--disp);font-weight:800;font-size:11px;margin:6px 0 2px;padding-bottom:1px;border-bottom:1px solid #bbb;break-after:avoid;break-inside:avoid}
+  .pr-time:first-child{margin-top:0}
+  .pr-m{break-inside:avoid;padding:1.5px 0;border-bottom:1px solid #eee;line-height:1.3}
+  .pr-row{display:flex;gap:5px;align-items:baseline}
+  .pr-c{font-weight:800;min-width:30px}
+  .pr-t{flex:1}
+  .pr-g{color:#777;font-size:8px;white-space:nowrap}
+  .pr-sr{margin-left:35px;color:#111}
+  .pr-sr.empty{color:#c8102e}
+  .pr-sr .lb{color:#777}
+
+  /* ---- court plan (grid) ---- */
+  .courtplan-scroll{overflow-x:auto}
+  table.cplan{border-collapse:collapse;width:100%;min-width:640px}
+  table.cplan th,table.cplan td{border:1px solid var(--line);vertical-align:top;padding:0}
+  table.cplan thead th{background:var(--ink);color:#fff;font-family:var(--disp);font-weight:700;font-size:13px;padding:7px 8px;text-align:center;position:sticky;top:0}
+  table.cplan thead th.tcol{background:var(--red);width:58px}
+  table.cplan td.tcell{background:var(--line-soft);font-family:var(--disp);font-weight:800;text-align:center;font-size:14px;color:var(--ink);width:58px}
+  .cp-cell{padding:6px 8px;min-width:150px}
+  .cp-cell .tm{font-family:var(--disp);font-weight:700;font-size:12.5px;line-height:1.25}
+  .cp-cell .gp{color:var(--muted);font-size:10.5px;margin-top:1px}
+  .cp-cell .sr{margin-top:4px;display:flex;flex-wrap:wrap;gap:3px}
+  .cp-cell .sr .t{background:var(--go-soft);color:var(--go-ink);border:1px solid #cbe8da;border-radius:999px;padding:1px 7px;font-size:10.5px;font-weight:600}
+  .cp-cell .sr .none{color:var(--red);font-size:10.5px;font-weight:600}
+  .cp-empty{min-height:20px}
+
+  /* named landscape page for the court plan print */
+  @page cplan{ size:A4 landscape; margin:8mm }
+  #printArea.landscape{ page:cplan }
+  #printArea .cp-print{font-size:8.5px}
+  #printArea table.cplan{min-width:0}
+  #printArea table.cplan thead th{background:#111!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #printArea table.cplan thead th.tcol,#printArea table.cplan td.tcell{background:#eee!important}
+  #printArea .cp-cell{min-width:0;padding:3px 4px}
+  #printArea .cp-cell .sr .t{background:#eef7f1!important;border-color:#cbe8da}
 </style>
 </head>
 <body>
@@ -235,18 +290,20 @@
   <div class="inner">
     <div class="brand">
       <div class="ball"></div>
-      <div><b>Referee Desk</b><span>Schiedsrichter-Einteilung</span></div>
+      <div><b>Referee Desk</b><span>Referee scheduling</span></div>
     </div>
     <nav class="tabs" id="tabs">
-      <button data-view="plan" class="active">Einteilung</button>
-      <button data-view="board">Ansicht</button>
+      <button data-view="plan" class="active">Assign</button>
+      <button data-view="board">Board</button>
+      <button data-view="courts">Court Plan</button>
       <button data-view="import">Import</button>
-      <button data-view="settings">Einstellungen</button>
+      <button data-view="settings">Settings</button>
     </nav>
+    <select id="eventSwitch" class="event-switch" title="Choose event"></select>
     <div class="beacon" id="beacon"><span class="led"></span><span id="beaconTxt">…</span></div>
     <div class="userchip" id="userChip" style="display:none">
       <span class="who" id="userEmail"></span>
-      <button class="btn ghost sm" id="btnSignOut">Abmelden</button>
+      <button class="btn ghost sm" id="btnSignOut">Sign out</button>
     </div>
   </div>
 </header>
@@ -255,24 +312,24 @@
 <div class="gate" id="gate" style="display:none">
   <div class="gate-card">
     <div class="brand" style="justify-content:center;margin-bottom:6px">
-      <div class="ball"></div><div><b>Referee Desk</b><span>Schiedsrichter-Einteilung</span></div>
+      <div class="ball"></div><div><b>Referee Desk</b><span>Referee scheduling</span></div>
     </div>
-    <h2 id="gateTitle">Anmelden</h2>
-    <p class="sub" id="gateSub">Zugang nur für registrierte Personen.</p>
+    <h2 id="gateTitle">Sign in</h2>
+    <p class="sub" id="gateSub">Access for registered users only.</p>
 
     <div id="loginForm">
-      <label class="fld"><span>E-Mail</span><input type="email" id="loginEmail" autocomplete="username" placeholder="name@verein.de"></label>
-      <label class="fld"><span>Passwort</span><input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••"></label>
+      <label class="fld"><span>Email</span><input type="email" id="loginEmail" autocomplete="username" placeholder="name@verein.de"></label>
+      <label class="fld"><span>Password</span><input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••"></label>
       <p class="gate-err" id="loginErr"></p>
-      <button class="btn red" id="btnLogin" style="width:100%">Anmelden</button>
-      <button class="btn ghost sm" id="btnForgot" style="width:100%;margin-top:8px">Passwort vergessen?</button>
+      <button class="btn red" id="btnLogin" style="width:100%">Sign in</button>
+      <button class="btn ghost sm" id="btnForgot" style="width:100%;margin-top:8px">Forgot password?</button>
     </div>
 
     <div id="resetForm" style="display:none">
-      <label class="fld"><span>E-Mail für Zurücksetzen</span><input type="email" id="resetEmail" placeholder="name@verein.de"></label>
+      <label class="fld"><span>Email for reset</span><input type="email" id="resetEmail" placeholder="name@verein.de"></label>
       <p class="gate-err" id="resetMsg"></p>
-      <button class="btn" id="btnSendReset" style="width:100%">Reset-Link senden</button>
-      <button class="btn ghost sm" id="btnBackLogin" style="width:100%;margin-top:8px">Zurück</button>
+      <button class="btn" id="btnSendReset" style="width:100%">Send reset link</button>
+      <button class="btn ghost sm" id="btnBackLogin" style="width:100%;margin-top:8px">Back</button>
     </div>
 
     <p class="gate-note" id="gateNote"></p>
@@ -282,11 +339,11 @@
 <!-- ===== NEUES PASSWORT (Recovery) ===== -->
 <div class="modal-bg" id="recoveryModal">
   <div class="modal" style="max-width:420px">
-    <h3>Neues Passwort setzen</h3>
-    <p class="sub">Du hast einen Reset-Link geöffnet. Vergib jetzt ein neues Passwort.</p>
-    <label class="fld"><span>Neues Passwort</span><input type="password" id="newPass" placeholder="mind. 6 Zeichen"></label>
+    <h3>Set a new password</h3>
+    <p class="sub">You opened a reset link. Set a new password now.</p>
+    <label class="fld"><span>New password</span><input type="password" id="newPass" placeholder="at least 6 characters"></label>
     <p class="gate-err" id="recoveryMsg"></p>
-    <button class="btn red" id="btnSetPass" style="width:100%">Passwort speichern</button>
+    <button class="btn red" id="btnSetPass" style="width:100%">Save password</button>
   </div>
 </div>
 
@@ -294,17 +351,17 @@
   <!-- ============ PLAN ============ -->
   <section class="view active" id="view-plan">
     <div id="planEmpty" class="empty-state" style="display:none">
-      <div class="big">Noch keine Begegnungen</div>
-      <div>Importiere den Spielplan aus der Tournamentsoftware im Reiter <b>Import</b>.</div>
+      <div class="big" id="planEmptyBig">No matches yet</div>
+      <div id="planEmptyMsg">Import the schedule from the tournament software on the <b>Import</b> tab.</div>
     </div>
 
     <div id="planBody" style="display:none">
       <div class="railwrap" id="dateRail">
-        <p class="rail-label">Spieltag</p>
+        <p class="rail-label">Day</p>
         <div class="pills" id="datePills"></div>
       </div>
       <div class="railwrap">
-        <p class="rail-label">Anspielzeit</p>
+        <p class="rail-label">Start time</p>
         <div class="pills" id="timePills"></div>
       </div>
 
@@ -320,15 +377,15 @@
 
         <aside class="side">
           <div class="card">
-            <div class="ch"><h3>Pause · verfügbar</h3><span class="tag-count" id="availCount">0</span></div>
+            <div class="ch"><h3>Break · available</h3><span class="tag-count" id="availCount">0</span></div>
             <div class="cb">
               <div id="conflicts"></div>
               <div class="avail" id="availList"></div>
-              <p class="empty-note" id="availEmpty" style="display:none">Alle aktiven Schiedsrichter sind zu dieser Zeit eingeteilt.</p>
+              <p class="empty-note" id="availEmpty" style="display:none">All referees for this event are assigned at this time.</p>
             </div>
           </div>
           <div class="card">
-            <div class="ch"><h3>Einsätze am Spieltag</h3></div>
+            <div class="ch"><h3>Assignments this day</h3></div>
             <div class="cb"><div class="wl" id="workload"></div></div>
           </div>
         </aside>
@@ -339,21 +396,21 @@
   <!-- ============ BOARD (Ansicht) ============ -->
   <section class="view" id="view-board">
     <div id="boardEmpty" class="empty-state" style="display:none">
-      <div class="big">Noch keine Begegnungen</div>
-      <div>Sobald der Spielplan importiert ist, erscheint hier die Übersicht.</div>
+      <div class="big">No matches yet</div>
+      <div>Once the schedule is imported, the overview appears here.</div>
     </div>
     <div id="boardBody" style="display:none">
       <div class="board-bar">
-        <div><p class="rail-label" style="margin-bottom:6px">Spieltag</p>
+        <div><p class="rail-label" style="margin-bottom:6px">Day</p>
           <div class="pills" id="boardDatePills"></div>
         </div>
-        <div class="grow"><p class="rail-label" style="margin-bottom:6px">Nur meine Begegnungen</p>
-          <select id="refFilter"><option value="">Alle Schiedsrichter</option></select>
+        <div class="grow"><p class="rail-label" style="margin-bottom:6px">Only my matches</p>
+          <select id="refFilter"><option value="">All referees</option></select>
         </div>
         <div style="align-self:flex-end;display:flex;gap:8px">
-          <button class="btn sm" id="btnPrint">Als PDF / Drucken</button>
-          <button class="btn ghost sm" id="btnShare">Link teilen</button>
-          <button class="btn ghost sm" id="btnRefreshBoard">Aktualisieren</button>
+          <button class="btn sm" id="btnPrint">Save as PDF / Print</button>
+          <button class="btn ghost sm" id="btnShare">Share link</button>
+          <button class="btn ghost sm" id="btnRefreshBoard">Refresh</button>
         </div>
       </div>
       <div id="filterActive"></div>
@@ -361,46 +418,66 @@
     </div>
   </section>
 
+  <!-- ============ COURT PLAN ============ -->
+  <section class="view" id="view-courts">
+    <div id="courtsEmpty" class="empty-state" style="display:none">
+      <div class="big">Nothing to show</div>
+      <div>Import a schedule first.</div>
+    </div>
+    <div id="courtsBody" style="display:none">
+      <div class="board-bar">
+        <div><p class="rail-label" style="margin-bottom:6px">Day</p>
+          <div class="pills" id="courtsDatePills"></div>
+        </div>
+        <div style="align-self:flex-end;display:flex;gap:8px">
+          <button class="btn sm" id="btnPrintCourts">Save as PDF / Print</button>
+        </div>
+      </div>
+      <div class="courtplan-scroll"><div id="courtPlan"></div></div>
+    </div>
+  </section>
+
   <!-- ============ IMPORT ============ -->
   <section class="view" id="view-import">
     <div class="panel">
       <div class="card">
-        <div class="ch"><h3>Spielplan importieren</h3></div>
+        <div class="ch"><h3>Import schedule</h3></div>
         <div class="cb">
-          <p class="hint" style="margin-top:0">Datei aus der Tournamentsoftware hochladen (<b>.pdf</b> oder <b>.txt</b>) oder den Text direkt einfügen. Danach prüfst du die erkannten Begegnungen und importierst.</p>
+          <p class="hint" style="margin-top:0">Upload a file from the tournament software (<b>.pdf</b> or <b>.txt</b>) or paste the text directly. Then review the detected matches and import.</p>
           <div class="file-drop" id="fileDrop" style="margin:12px 0">
             <input type="file" id="fileInput" accept=".pdf,.txt,text/plain,application/pdf" style="display:none">
-            <div><b>Datei wählen</b> · PDF oder TXT — oder Text unten einfügen</div>
+            <div><b>Choose file</b> · PDF or TXT — or paste text below</div>
           </div>
-          <label class="fld"><span>Text aus dem Export</span>
-            <textarea id="importText" placeholder="Inhalt der Exportdatei hier einfügen…"></textarea>
+          <label class="fld"><span>Text from the export</span>
+            <textarea id="importText" placeholder="Paste the content of the export file here…"></textarea>
           </label>
           <div class="row-inline">
-            <button class="btn" id="btnParse">Analysieren</button>
+            <button class="btn" id="btnParse">Analyze</button>
             <span class="hint" id="parseInfo"></span>
           </div>
         </div>
       </div>
 
       <div class="card" id="previewCard" style="display:none">
-        <div class="ch"><h3>Vorschau &amp; Prüfung</h3><span class="hint" id="prevCount"></span></div>
+        <div class="ch"><h3>Preview &amp; check</h3><span class="hint" id="prevCount"></span></div>
         <div class="cb">
+          <p class="hint" style="margin-top:0">Target event: <b id="impTargetEvent">–</b>. The import is <b>added</b>; identical matches that already exist are skipped automatically.</p>
           <div class="grid2">
-            <label class="fld"><span>Spieltag (Datum)</span><input type="text" id="impDate" placeholder="tt.mm.jjjj"></label>
+            <label class="fld"><span>Day (date)</span><input type="text" id="impDate" placeholder="tt.mm.jjjj"></label>
             <label class="fld" style="display:flex;align-items:flex-end;padding-bottom:12px">
-              <span style="margin:0"><input type="checkbox" id="impReplace" checked style="width:auto;margin-right:7px;vertical-align:-1px">Vorhandene Begegnungen dieses Datums vorher löschen</span>
+              <span style="margin:0"><input type="checkbox" id="impReplace" style="width:auto;margin-right:7px;vertical-align:-1px">Replace this day in the event completely first</span>
             </label>
           </div>
-          <p class="hint" style="margin-top:0">Court, Heim &amp; Gast kannst du hier noch korrigieren, falls die Erkennung mal danebenliegt.</p>
+          <p class="hint" style="margin-top:0">You can still correct court, home &amp; away here if the detection is ever off.</p>
           <div class="prevwrap" style="margin:10px 0">
             <table class="prev">
-              <thead><tr><th>Zeit</th><th>Court</th><th>Halle</th><th>Wettbewerb</th><th>Heim</th><th></th><th>Gast</th></tr></thead>
+              <thead><tr><th>Time</th><th>Court</th><th>Venue</th><th>Competition</th><th>Home</th><th></th><th>Away</th></tr></thead>
               <tbody id="prevBody"></tbody>
             </table>
           </div>
           <div class="row-inline">
-            <button class="btn red" id="btnImport">Importieren</button>
-            <button class="btn ghost" id="btnCancelImport">Verwerfen</button>
+            <button class="btn red" id="btnImport">Import</button>
+            <button class="btn ghost" id="btnCancelImport">Discard</button>
           </div>
         </div>
       </div>
@@ -411,24 +488,79 @@
   <section class="view" id="view-settings">
     <div class="panel">
       <div class="card">
-        <div class="ch"><h3>Schiedsrichter</h3><span class="hint" id="refTotal"></span></div>
+        <div class="ch"><h3>Events</h3><span class="hint" id="evTotal"></span></div>
         <div class="cb">
-          <div class="row-inline" style="margin-bottom:8px">
-            <input type="text" id="refName" placeholder="Name" style="flex:2;min-width:160px">
-            <input type="text" id="refNote" placeholder="Notiz / Verein (optional)" style="flex:2;min-width:160px">
-            <button class="btn sm" id="btnAddRef">Hinzufügen</button>
+          <div class="grid2" style="margin-bottom:8px">
+            <input type="text" id="evName" placeholder="Event name, e.g. European Club Championship 2026">
+            <input type="text" id="evLocation" placeholder="Location (optional)">
           </div>
-          <div class="reflist" id="refList"></div>
+          <div class="row-inline" style="margin-bottom:10px">
+            <input type="text" id="evStart" placeholder="from (dd.mm.yyyy)" style="flex:1;min-width:120px">
+            <input type="text" id="evEnd" placeholder="to (dd.mm.yyyy)" style="flex:1;min-width:120px">
+            <button class="btn sm" id="btnAddEvent">Create event</button>
+          </div>
+          <div class="evlist" id="eventList"></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="ch"><h3>Datenspeicher</h3><span class="hint" id="storeMode"></span></div>
+        <div class="ch"><h3>Referee database</h3><span class="hint" id="refTotal"></span></div>
         <div class="cb">
-          <label class="fld"><span>Speicherort</span>
+          <div class="ref-form">
+            <div class="ref-photo">
+              <div class="avatar lg" id="refPhotoPrev">+</div>
+              <input type="file" id="refPhotoInput" accept="image/*" style="display:none">
+              <button class="btn ghost sm" id="btnRefPhoto">Photo</button>
+              <button class="btn ghost sm" id="btnRefPhotoClear" style="display:none">✕</button>
+            </div>
+            <div class="ref-fields">
+              <div class="grid2">
+                <label class="fld"><span>Name</span><input type="text" id="refName" placeholder="First and last name"></label>
+                <label class="fld"><span>Location</span><input type="text" id="refLocation" placeholder="City / club"></label>
+              </div>
+              <div class="grid2">
+                <label class="fld"><span>Referee level</span>
+                  <input type="text" id="refLevel" list="levelOptions" placeholder="e.g. National">
+                  <datalist id="levelOptions">
+                    <option value="Anwärter"><option value="Bezirk"><option value="Landesebene">
+                    <option value="National"><option value="WSF Regional"><option value="WSF National">
+                    <option value="WSF International Referee"><option value="WSF World Referee">
+                  </datalist>
+                </label>
+                <label class="fld"><span>Mobile phone</span><input type="text" id="refPhone" placeholder="+49 …"></label>
+              </div>
+              <div class="grid2">
+                <label class="fld"><span>Email</span><input type="text" id="refEmail" placeholder="name@mail.de"></label>
+                <label class="fld"><span>Note (optional)</span><input type="text" id="refNote" placeholder="free text"></label>
+              </div>
+              <div class="row-inline">
+                <button class="btn sm" id="btnSaveRef">Add to database</button>
+                <button class="btn ghost sm" id="btnCancelRefEdit" style="display:none">Cancel</button>
+                <span class="hint" id="refEditHint"></span>
+              </div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <input type="text" id="refSearch" placeholder="Search database…" style="margin-bottom:10px">
+          <div class="dblist" id="refList"></div>
+        </div>
+      </div>
+
+      <div class="card" id="enrollCard">
+        <div class="ch"><h3>Referees in this event</h3><span class="hint" id="enrollInfo"></span></div>
+        <div class="cb">
+          <p class="hint" style="margin-top:0" id="enrollHint">Pick from the database who takes part in this event. Only these appear in scheduling.</p>
+          <div class="dblist" id="enrollList"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><h3>Data storage</h3><span class="hint" id="storeMode"></span></div>
+        <div class="cb">
+          <label class="fld"><span>Storage location</span>
             <select id="backendSel">
-              <option value="local">Lokal (nur dieser Browser)</option>
-              <option value="supabase">Supabase (geteilt, empfohlen für das Turnier)</option>
+              <option value="local">Local (this browser only)</option>
+              <option value="supabase">Supabase (shared, recommended for the tournament)</option>
             </select>
           </label>
           <div id="supaFields">
@@ -436,33 +568,33 @@
               <label class="fld"><span>Supabase Project URL</span><input type="url" id="supaUrl" placeholder="https://xxxx.supabase.co"></label>
               <label class="fld"><span>Anon / Public Key</span><input type="password" id="supaKey" placeholder="eyJhbGciOi…"></label>
             </div>
-            <p class="hint" style="margin-top:0">Der Anon-Key ist für den Client gedacht und öffentlich unkritisch, wird aber lokal in diesem Browser gespeichert – nicht im GitHub-Repo. Schütze die Tabellen zusätzlich über Supabase-RLS-Policies (siehe Schema).</p>
+            <p class="hint" style="margin-top:0">The anon key is meant for the client and is safe to expose, but it is stored locally in this browser – not in the GitHub repo. Additionally protect the tables via Supabase RLS policies (see schema).</p>
           </div>
           <div class="row-inline" style="margin-top:6px">
-            <button class="btn" id="btnConnect">Speichern &amp; verbinden</button>
-            <button class="btn ghost sm" id="btnShowSql">SQL-Schema anzeigen</button>
+            <button class="btn" id="btnConnect">Save &amp; connect</button>
+            <button class="btn ghost sm" id="btnShowSql">Show SQL schema</button>
             <span class="beacon" id="beacon2"><span class="led"></span><span id="beacon2Txt"></span></span>
           </div>
           <div id="sqlBox" style="display:none;margin-top:12px">
             <div class="codebox" id="sqlText"></div>
-            <div class="row-inline" style="margin-top:8px"><button class="btn ghost sm" id="btnCopySql">Kopieren</button></div>
+            <div class="row-inline" style="margin-top:8px"><button class="btn ghost sm" id="btnCopySql">Copy</button></div>
           </div>
         </div>
       </div>
 
       <div class="card" id="accountCard" style="display:none">
-        <div class="ch"><h3>Konto &amp; Zugang</h3></div>
+        <div class="ch"><h3>Account &amp; access</h3></div>
         <div class="cb">
           <div class="account-row" id="accountRow"></div>
-          <p class="hint">Benutzer werden in Supabase verwaltet (Authentication → Users). Damit sich niemand selbst registrieren kann, in Supabase unter Auth → Providers → Email die Option „Allow new users to sign up" deaktivieren und Personen manuell anlegen.</p>
+          <p class="hint">Users are managed in Supabase (Authentication → Users). To stop self sign-up, disable "Allow new users to sign up" under Auth → Providers → Email and add people manually.</p>
         </div>
       </div>
 
       <div class="card">
-        <div class="ch"><h3>Wartung</h3></div>
+        <div class="ch"><h3>Maintenance</h3></div>
         <div class="cb row-inline">
-          <button class="btn ghost sm" id="btnReload">Daten neu laden</button>
-          <button class="btn ghost sm" id="btnWipe" style="border-color:var(--red);color:var(--red-ink)">Alle Begegnungen löschen</button>
+          <button class="btn ghost sm" id="btnReload">Reload data</button>
+          <button class="btn ghost sm" id="btnWipe" style="border-color:var(--red);color:var(--red-ink)">Delete all matches</button>
         </div>
       </div>
     </div>
@@ -474,14 +606,14 @@
 <div class="modal-bg" id="shareModal">
   <div class="modal">
     <button class="close" id="shareClose">×</button>
-    <h3>Link teilen</h3>
-    <p class="sub">Nur-Lese-Ansicht — Editieren ist über diesen Link nicht möglich. Setzt einen verbundenen Supabase-Speicher voraus (siehe Hinweis unten).</p>
-    <label class="fld"><span>Allgemeiner Link (alle sehen die Einteilung)</span>
-      <div class="linkrow"><input type="text" id="shareGeneral" readonly><button class="btn sm" data-copy="shareGeneral">Kopieren</button></div>
+    <h3>Share link</h3>
+    <p class="sub">Read-only view — editing is not possible via this link. Requires a connected Supabase store (see note below).</p>
+    <label class="fld"><span>General link (everyone sees the schedule)</span>
+      <div class="linkrow"><input type="text" id="shareGeneral" readonly><button class="btn sm" data-copy="shareGeneral">Copy</button></div>
     </label>
-    <label class="fld"><span>Persönlicher Link für einen Schiedsrichter (nur seine Begegnungen)</span>
-      <select id="sharePick" style="margin-bottom:8px"><option value="">Schiedsrichter wählen…</option></select>
-      <div class="linkrow"><input type="text" id="sharePersonal" readonly placeholder="Erst Schiedsrichter wählen"><button class="btn sm" data-copy="sharePersonal">Kopieren</button></div>
+    <label class="fld"><span>Personal link for one referee (only their matches)</span>
+      <select id="sharePick" style="margin-bottom:8px"><option value="">Choose referee…</option></select>
+      <div class="linkrow"><input type="text" id="sharePersonal" readonly placeholder="Choose a referee first"><button class="btn sm" data-copy="sharePersonal">Copy</button></div>
     </label>
     <p class="hint" id="shareWarn"></p>
   </div>
@@ -515,19 +647,30 @@ const uid = ()=> (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+Mat
 const esc = s => (s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 const LS = {
-  cfg:'rd_config', refs:'rd_referees', matches:'rd_matches', asg:'rd_assignments'
+  cfg:'rd_config', refs:'rd_referees', matches:'rd_matches', asg:'rd_assignments',
+  events:'rd_events', enroll:'rd_event_refs', curEvent:'rd_current_event'
 };
 
 const params = new URLSearchParams(location.search);
 const VIEW_ONLY = params.get('view')==='1';           // reiner Ansichtsmodus (geteilter Link)
 const URL_REF   = params.get('ref') ? decodeURIComponent(params.get('ref')) : '';
+const URL_EVENT = params.get('event') || '';
 
 const state = {
   backend:'local', supa:null, connected:false, user:null, supaUrl:'',
-  referees:[], matches:[], assignments:{},   // matchId -> [refId...]
+  events:[], curEvent:null,                    // curEvent = event id
+  referees:[],                                 // Stammdatenbank (alle)
+  enrollment:{},                               // eventId -> [refId...]
+  matches:[], assignments:{},                  // matchId -> [refId...] (aktuelles Event)
   selDate:null, selTime:null, parsed:[],
-  boardDate:null, refFilter:URL_REF
+  boardDate:null, courtsDate:null, refFilter:URL_REF
 };
+
+/* natürlicher Schlüssel einer Begegnung — für Dedupe beim Import */
+function matchKey(m){
+  return [m.event_id||'', m.match_date||'', m.time||'', m.court||'', (m.event||''), (m.grp||''),
+    (m.home_team||'').toLowerCase(), (m.away_team||'').toLowerCase()].join('|');
+}
 
 /* ---------------- toast ---------------- */
 let toastT;
@@ -535,94 +678,196 @@ function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('sh
 
 /* ============================================================
    STORAGE LAYER — Supabase when connected, else localStorage
+   Datenmodell: events, referees (Stamm), event_referees (Zuordnung),
+   matches (mit event_id), assignments.
    ============================================================ */
+const REF_FIELDS = ['name','location','level','phone','email','photo','note','active'];
+function cleanRef(r){ const o={}; REF_FIELDS.forEach(f=>{ if(r[f]!==undefined) o[f]=r[f]; }); return o; }
+
 const store = {
-  async loadAll(){
+  // --- Stammdaten: Events + alle Schiedsrichter (immer geladen) ---
+  async loadBase(){
     if(state.backend==='supabase' && state.supa){
-      const [r,m,a] = await Promise.all([
+      const [e,r,er] = await Promise.all([
+        state.supa.from('events').select('*').order('created_at'),
         state.supa.from('referees').select('*').order('name'),
-        state.supa.from('matches').select('*').order('match_date').order('sort_order'),
-        state.supa.from('assignments').select('*')
+        state.supa.from('event_referees').select('*')
       ]);
-      if(r.error||m.error||a.error) throw (r.error||m.error||a.error);
+      if(e.error||r.error||er.error) throw (e.error||r.error||er.error);
+      state.events = e.data||[];
       state.referees = r.data||[];
-      state.matches  = m.data||[];
-      const map={}; (a.data||[]).forEach(x=>{ (map[x.match_id]=map[x.match_id]||[]).push(x.referee_id); });
-      state.assignments = map;
+      const en={}; (er.data||[]).forEach(x=>{ (en[x.event_id]=en[x.event_id]||[]).push(x.referee_id); });
+      state.enrollment = en;
     } else {
+      state.events     = JSON.parse(localStorage.getItem(LS.events)||'[]');
       state.referees   = JSON.parse(localStorage.getItem(LS.refs)||'[]');
-      state.matches    = JSON.parse(localStorage.getItem(LS.matches)||'[]');
-      state.assignments= JSON.parse(localStorage.getItem(LS.asg)||'{}');
+      state.enrollment = JSON.parse(localStorage.getItem(LS.enroll)||'{}');
+    }
+    state.referees.sort((a,b)=>(a.name||'').localeCompare(b.name||'','de'));
+  },
+  // --- Event-Daten: Begegnungen + Zuteilungen des aktuellen Events ---
+  async loadEventData(){
+    const ev=state.curEvent;
+    if(!ev){ state.matches=[]; state.assignments={}; return; }
+    if(state.backend==='supabase' && state.supa){
+      const m=await state.supa.from('matches').select('*').eq('event_id',ev).order('match_date').order('sort_order');
+      if(m.error) throw m.error;
+      state.matches=m.data||[];
+      const ids=state.matches.map(x=>x.id);
+      let map={};
+      if(ids.length){
+        const a=await state.supa.from('assignments').select('*').in('match_id',ids);
+        if(a.error) throw a.error;
+        (a.data||[]).forEach(x=>{ (map[x.match_id]=map[x.match_id]||[]).push(x.referee_id); });
+      }
+      state.assignments=map;
+    } else {
+      const all=JSON.parse(localStorage.getItem(LS.matches)||'[]');
+      state.matches=all.filter(m=>m.event_id===ev);
+      const asg=JSON.parse(localStorage.getItem(LS.asg)||'{}');
+      const map={}; state.matches.forEach(m=>{ if(asg[m.id]) map[m.id]=asg[m.id]; });
+      state.assignments=map;
     }
   },
-  _saveLocal(){
+  async loadAll(){ await this.loadBase(); await this.loadEventData(); },
+
+  // --- localStorage helpers (arbeiten auf Gesamtmenge) ---
+  _saveBaseLocal(){
+    localStorage.setItem(LS.events,JSON.stringify(state.events));
     localStorage.setItem(LS.refs,JSON.stringify(state.referees));
-    localStorage.setItem(LS.matches,JSON.stringify(state.matches));
-    localStorage.setItem(LS.asg,JSON.stringify(state.assignments));
+    localStorage.setItem(LS.enroll,JSON.stringify(state.enrollment));
   },
-  async addReferee(ref){
-    ref = {name:ref.name, note:ref.note||'', active:true};
+  _allMatchesLocal(){ return JSON.parse(localStorage.getItem(LS.matches)||'[]'); },
+  _saveAllMatchesLocal(list){ localStorage.setItem(LS.matches,JSON.stringify(list)); },
+  _allAsgLocal(){ return JSON.parse(localStorage.getItem(LS.asg)||'{}'); },
+  _saveAllAsgLocal(map){ localStorage.setItem(LS.asg,JSON.stringify(map)); },
+
+  // --- Events ---
+  async addEvent(ev){
+    ev={name:ev.name, location:ev.location||'', start_date:ev.start_date||'', end_date:ev.end_date||''};
     if(state.backend==='supabase' && state.supa){
-      const {data,error}=await state.supa.from('referees').insert(ref).select().single();
+      const {data,error}=await state.supa.from('events').insert(ev).select().single(); if(error) throw error;
+      state.events.push(data); return data;
+    } else { const row={id:uid(),created_at:new Date().toISOString(),...ev}; state.events.push(row); this._saveBaseLocal(); return row; }
+  },
+  async updateEvent(id,patch){
+    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('events').update(patch).eq('id',id); if(error) throw error; }
+    const e=state.events.find(x=>x.id===id); if(e) Object.assign(e,patch);
+    if(state.backend!=='supabase') this._saveBaseLocal();
+  },
+  async deleteEvent(id){
+    if(state.backend==='supabase' && state.supa){
+      const {error}=await state.supa.from('events').delete().eq('id',id); if(error) throw error; // matches/enrollment cascade
+    } else {
+      state.events=state.events.filter(x=>x.id!==id);
+      const keep=this._allMatchesLocal().filter(m=>m.event_id!==id);
+      const removed=this._allMatchesLocal().filter(m=>m.event_id===id).map(m=>m.id);
+      this._saveAllMatchesLocal(keep);
+      const asg=this._allAsgLocal(); removed.forEach(mid=>delete asg[mid]); this._saveAllAsgLocal(asg);
+      delete state.enrollment[id]; this._saveBaseLocal();
+    }
+    state.events=state.events.filter(x=>x.id!==id);
+    delete state.enrollment[id];
+  },
+
+  // --- Schiedsrichter (Stamm) ---
+  async addReferee(ref){
+    const payload=cleanRef({active:true, ...ref});
+    if(state.backend==='supabase' && state.supa){
+      const {data,error}=await state.supa.from('referees').insert(payload).select().single();
       if(error) throw error; state.referees.push(data);
-    } else { const row={id:uid(),...ref}; state.referees.push(row); this._saveLocal(); }
-    state.referees.sort((a,b)=>a.name.localeCompare(b.name,'de'));
+    } else { const row={id:uid(),...payload}; state.referees.push(row); this._saveBaseLocal(); }
+    state.referees.sort((a,b)=>(a.name||'').localeCompare(b.name||'','de'));
   },
   async updateReferee(id,patch){
-    if(state.backend==='supabase' && state.supa){
-      const {error}=await state.supa.from('referees').update(patch).eq('id',id); if(error) throw error;
-    }
-    const r=state.referees.find(x=>x.id===id); if(r) Object.assign(r,patch);
-    if(state.backend!=='supabase') this._saveLocal();
-    state.referees.sort((a,b)=>a.name.localeCompare(b.name,'de'));
+    const p=cleanRef(patch);
+    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('referees').update(p).eq('id',id); if(error) throw error; }
+    const r=state.referees.find(x=>x.id===id); if(r) Object.assign(r,p);
+    if(state.backend!=='supabase') this._saveBaseLocal();
+    state.referees.sort((a,b)=>(a.name||'').localeCompare(b.name||'','de'));
   },
   async deleteReferee(id){
     if(state.backend==='supabase' && state.supa){
-      const {error}=await state.supa.from('referees').delete().eq('id',id); if(error) throw error;
-    }
-    state.referees = state.referees.filter(x=>x.id!==id);
-    for(const mid in state.assignments) state.assignments[mid]=state.assignments[mid].filter(x=>x!==id);
-    if(state.backend!=='supabase') this._saveLocal();
-  },
-  async clearMatchesForDate(date){
-    const ids = state.matches.filter(m=>m.match_date===date).map(m=>m.id);
-    if(state.backend==='supabase' && state.supa){
-      const {error}=await state.supa.from('matches').delete().eq('match_date',date); if(error) throw error;
-    }
-    state.matches = state.matches.filter(m=>m.match_date!==date);
-    ids.forEach(id=>delete state.assignments[id]);
-    if(state.backend!=='supabase') this._saveLocal();
-  },
-  async wipeMatches(){
-    if(state.backend==='supabase' && state.supa){
-      const {error}=await state.supa.from('matches').delete().neq('id','00000000-0000-0000-0000-000000000000'); if(error) throw error;
-    }
-    state.matches=[]; state.assignments={};
-    if(state.backend!=='supabase') this._saveLocal();
-  },
-  async addMatches(rows){
-    if(state.backend==='supabase' && state.supa){
-      const {data,error}=await state.supa.from('matches').insert(rows).select(); if(error) throw error;
-      state.matches.push(...data);
+      const {error}=await state.supa.from('referees').delete().eq('id',id); if(error) throw error; // enrollment/assignments cascade
     } else {
-      rows.forEach(r=>state.matches.push({id:uid(),...r})); this._saveLocal();
+      state.referees=state.referees.filter(x=>x.id!==id);
+      Object.keys(state.enrollment).forEach(ev=>{ state.enrollment[ev]=state.enrollment[ev].filter(x=>x!==id); });
+      const asg=this._allAsgLocal(); Object.keys(asg).forEach(mid=>{ asg[mid]=asg[mid].filter(x=>x!==id); }); this._saveAllAsgLocal(asg);
+      this._saveBaseLocal();
+    }
+    state.referees=state.referees.filter(x=>x.id!==id);
+    Object.keys(state.enrollment).forEach(ev=>{ state.enrollment[ev]=(state.enrollment[ev]||[]).filter(x=>x!==id); });
+    for(const mid in state.assignments) state.assignments[mid]=state.assignments[mid].filter(x=>x!==id);
+  },
+
+  // --- Zuordnung Schiedsrichter <-> Event ---
+  async enroll(eventId,refId){
+    const arr=state.enrollment[eventId]=state.enrollment[eventId]||[];
+    if(arr.includes(refId)) return;
+    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('event_referees').insert({event_id:eventId,referee_id:refId}); if(error) throw error; }
+    arr.push(refId);
+    if(state.backend!=='supabase') this._saveBaseLocal();
+  },
+  async unenroll(eventId,refId){
+    if(state.backend==='supabase' && state.supa){
+      const {error}=await state.supa.from('event_referees').delete().eq('event_id',eventId).eq('referee_id',refId); if(error) throw error;
+      // Zuteilungen dieses SR in diesem Event entfernen
+      const mids=state.matches.map(m=>m.id);
+      if(mids.length){ await state.supa.from('assignments').delete().eq('referee_id',refId).in('match_id',mids); }
+    }
+    state.enrollment[eventId]=(state.enrollment[eventId]||[]).filter(x=>x!==refId);
+    for(const mid in state.assignments) state.assignments[mid]=state.assignments[mid].filter(x=>x!==refId);
+    if(state.backend!=='supabase'){
+      const asg=this._allAsgLocal(); state.matches.forEach(m=>{ if(asg[m.id]) asg[m.id]=asg[m.id].filter(x=>x!==refId); }); this._saveAllAsgLocal(asg);
+      this._saveBaseLocal();
     }
   },
-  async assign(matchId,refId){
-    const arr = state.assignments[matchId]=state.assignments[matchId]||[];
-    if(arr.includes(refId)) return;
-    if(state.backend==='supabase' && state.supa){
-      const {error}=await state.supa.from('assignments').insert({match_id:matchId,referee_id:refId}); if(error) throw error;
+
+  // --- Begegnungen ---
+  async wipeMatches(){ // nur aktuelles Event
+    const ev=state.curEvent; if(!ev) return;
+    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('matches').delete().eq('event_id',ev); if(error) throw error; }
+    else { const keep=this._allMatchesLocal().filter(m=>m.event_id!==ev); this._saveAllMatchesLocal(keep);
+      const asg=this._allAsgLocal(); state.matches.forEach(m=>delete asg[m.id]); this._saveAllAsgLocal(asg); }
+    state.matches=[]; state.assignments={};
+  },
+  async clearMatchesForDate(date){ // im aktuellen Event
+    const ev=state.curEvent; if(!ev) return;
+    const ids=state.matches.filter(m=>m.match_date===date).map(m=>m.id);
+    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('matches').delete().eq('event_id',ev).eq('match_date',date); if(error) throw error; }
+    else { const keep=this._allMatchesLocal().filter(m=>!(m.event_id===ev && m.match_date===date)); this._saveAllMatchesLocal(keep);
+      const asg=this._allAsgLocal(); ids.forEach(id=>delete asg[id]); this._saveAllAsgLocal(asg); }
+    state.matches=state.matches.filter(m=>m.match_date!==date);
+    ids.forEach(id=>delete state.assignments[id]);
+  },
+  // Additiv & dedupliziert: gibt {added, skipped} zurück
+  async addMatchesMerged(rows){
+    const ev=state.curEvent;
+    const existing=new Set(state.matches.map(matchKey));
+    const fresh=[]; let skipped=0;
+    for(const r of rows){ const row={...r, event_id:ev}; if(existing.has(matchKey(row))){ skipped++; continue; } existing.add(matchKey(row)); fresh.push(row); }
+    if(fresh.length){
+      if(state.backend==='supabase' && state.supa){
+        const {data,error}=await state.supa.from('matches').insert(fresh).select(); if(error) throw error;
+        state.matches.push(...data);
+      } else {
+        const all=this._allMatchesLocal(); fresh.forEach(r=>{ const row={id:uid(),...r}; all.push(row); state.matches.push(row); }); this._saveAllMatchesLocal(all);
+      }
     }
+    return {added:fresh.length, skipped};
+  },
+
+  async assign(matchId,refId){
+    const arr=state.assignments[matchId]=state.assignments[matchId]||[];
+    if(arr.includes(refId)) return;
+    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('assignments').insert({match_id:matchId,referee_id:refId}); if(error) throw error; }
     arr.push(refId);
-    if(state.backend!=='supabase') this._saveLocal();
+    if(state.backend!=='supabase'){ const asg=this._allAsgLocal(); asg[matchId]=arr; this._saveAllAsgLocal(asg); }
   },
   async unassign(matchId,refId){
-    if(state.backend==='supabase' && state.supa){
-      const {error}=await state.supa.from('assignments').delete().eq('match_id',matchId).eq('referee_id',refId); if(error) throw error;
-    }
+    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('assignments').delete().eq('match_id',matchId).eq('referee_id',refId); if(error) throw error; }
     state.assignments[matchId]=(state.assignments[matchId]||[]).filter(x=>x!==refId);
-    if(state.backend!=='supabase') this._saveLocal();
+    if(state.backend!=='supabase'){ const asg=this._allAsgLocal(); asg[matchId]=state.assignments[matchId]; this._saveAllAsgLocal(asg); }
   }
 };
 
@@ -636,30 +881,46 @@ function lcTokenPrefix(arrs){
     while(k<p.length&&k<a.length&&p[k].toLowerCase()===a[k].toLowerCase()) k++; p=p.slice(0,k); if(!p.length) break; }
   return p;
 }
+// trailing seed like [8] or [8/9]
+function splitSeed(s){
+  const m=(s||'').match(/^(.*?)\s*\[(\d+(?:\/\d+)?)\]\s*$/);
+  return m ? {text:m[1].trim(), seed:m[2]} : {text:(s||'').trim(), seed:''};
+}
 function parseSchedule(text){
   const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-  const rx=/^(.+?)\s+-\s+(.+?)\s+-\s+(.+?)\s*\[(\d+)\]\s*-\s*(.+?)\s*\[(\d+)\]\s*$/;
   let date=null,time=null,order=0; const raw=[];
   for(const line of lines){
     let m;
     if((m=line.match(/^Matches of\b.*?(\d{1,2}\.\d{1,2}\.\d{4})/))){ date=m[1]; continue; }
     if(/^\d{1,2}:\d{2}$/.test(line)){ time=line; continue; }
-    if((m=line.match(rx))){
-      const seg2=m[2].trim(); const cm=seg2.match(/^(.*?)\s*(\S+)$/); let grp='',court='';
-      if(cm && /^[A-Za-z]{1,6}\d+(&[A-Za-z]*\d+)*$/.test(cm[2])){ grp=cm[1].trim(); court=cm[2]; }
-      else { grp=seg2; court=''; }
-      raw.push({ match_date:date, time, event:m[1].trim(), grp, court,
-        _vh:m[3].trim(), home_seed:+m[4], away_team:m[5].trim(), away_seed:+m[6], sort_order:order++ });
-    }
+    // a match line splits into >=4 fields by " - "
+    const parts=line.split(/\s+-\s+/);
+    if(parts.length<4) continue;
+    const event=parts[0].trim();
+    const seg2=parts[1].trim();
+    const awayRaw=parts[parts.length-1].trim();
+    let homeRaw=parts.slice(2,parts.length-1).join(' - ').trim();
+    homeRaw=homeRaw.replace(/^['"’`\s]+/,'').trim();      // führenden '-Marker / Anführung entfernen
+    // Gruppe + Court aus seg2:  "Group A GC", "Group A C2 & C3", "Group A HC1", "Group C GC & 1"
+    let grp='',court='';
+    let gm=seg2.match(/^(Group\s+\S+)\s+(.+)$/i);
+    if(gm){ grp=gm[1].trim(); court=gm[2].trim(); }
+    else { const cm=seg2.match(/^(.*?)\s*(\S+)$/); if(cm){ grp=cm[1].trim(); court=cm[2].trim(); } else { grp=seg2; } }
+    const home=splitSeed(homeRaw), away=splitSeed(awayRaw);
+    // Zeilen ohne jede Setzung und ohne "Group" sind vermutlich keine Begegnung
+    if(!/group/i.test(seg2) && !home.seed && !away.seed && !court) continue;
+    raw.push({ match_date:date, time, event, grp, court,
+      _vh:home.text, home_seed:home.seed, away_team:away.text, away_seed:away.seed, sort_order:order++ });
   }
-  // venue detection per court-prefix
+  // Venue-Erkennung je Court-Präfix (nur echte, mehrwortige Hallennamen wie "Hector Sport Centre")
   const groups={};
   raw.forEach(r=>{ const p=(r.court.match(/^[A-Za-z]+/)||['?'])[0]; (groups[p]=groups[p]||[]).push(r); });
   for(const p in groups){
     const arr=groups[p]; const toks=arr.map(r=>r._vh.split(/\s+/)); let v=lcTokenPrefix(toks);
-    if(arr.length===1 && v.length===toks[0].length) v=v.slice(0,Math.max(0,v.length-1));
+    if(arr.length===1) v=[];                    // aus einer Zeile lässt sich kein Venue ableiten
+    if(v.length<2) v=[];                         // 1-Wort-Zufallstreffer nicht als Halle werten
     const venue=v.join(' ');
-    arr.forEach(r=>{ const t=r._vh.split(/\s+/); r.venue=venue; r.home_team=t.slice(v.length).join(' ')||r._vh; delete r._vh; });
+    arr.forEach(r=>{ const t=r._vh.split(/\s+/); r.venue=venue; r.home_team=(venue? t.slice(v.length).join(' '):r._vh)||r._vh; delete r._vh; });
   }
   return raw;
 }
@@ -676,7 +937,10 @@ function matchesAt(date,time){
   return state.matches.filter(m=>(m.match_date||'—')===date && m.time===time)
     .sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
 }
-function activeRefs(){ return state.referees.filter(r=>r.active!==false); }
+function curEventObj(){ return state.events.find(e=>e.id===state.curEvent)||null; }
+function enrolledIds(){ return new Set(state.enrollment[state.curEvent]||[]); }
+// „aktive" Schiedsrichter = dem aktuellen Event zugeordnet
+function activeRefs(){ const ids=enrolledIds(); return state.referees.filter(r=>ids.has(r.id)); }
 function refName(id){ const r=state.referees.find(x=>x.id===id); return r?r.name:'—'; }
 // which matches (in same date+time) a referee is assigned to
 function busyMap(date,time){
@@ -685,10 +949,17 @@ function busyMap(date,time){
 }
 
 function renderPlan(){
+  if(!state.curEvent){
+    $('#planEmpty').style.display='block'; $('#planBody').style.display='none';
+    $('#planEmptyBig').textContent='No event selected';
+    $('#planEmptyMsg').innerHTML='Create an event in <b>Settings</b> and select it at the top.';
+    return;
+  }
   const hasData = state.matches.length>0;
   $('#planEmpty').style.display = hasData?'none':'block';
   $('#planBody').style.display  = hasData?'block':'none';
-  if(!hasData) return;
+  if(!hasData){ $('#planEmptyBig').textContent='No matches yet';
+    $('#planEmptyMsg').innerHTML='Import the schedule on the <b>Import</b> tab — it is added to the current event.'; return; }
 
   const ds=dates();
   if(!state.selDate || !ds.includes(state.selDate)) state.selDate=ds[0];
@@ -710,7 +981,7 @@ function renderPlan(){
 
   const ms = matchesAt(state.selDate,state.selTime);
   $('#slotTime').textContent = state.selTime||'–';
-  $('#slotMeta').textContent = `${ms.length} Begegnung${ms.length===1?'':'en'} · ${state.selDate}`;
+  $('#slotMeta').textContent = `${ms.length} match${ms.length===1?'':'es'} · ${state.selDate}`;
 
   // match cards
   $('#courtGrid').innerHTML = ms.map(m=>matchCard(m)).join('');
@@ -722,7 +993,7 @@ function matchCard(m){
   const asg = state.assignments[m.id]||[];
   const alt = /^SBC/i.test(m.court);
   const chips = asg.map(rid=>`<span class="refchip">${esc(refName(rid))}<button data-unassign="${m.id}|${rid}" title="Entfernen">×</button></span>`).join('');
-  const noneWarn = asg.length===0 ? `<span class="none-ref">kein Schiedsrichter</span>` : '';
+  const noneWarn = asg.length===0 ? `<span class="none-ref">no referee</span>` : '';
   return `<div class="match">
     <div class="mhead">
       <span class="court${alt?' alt':''}">${esc(m.court||'—')}</span>
@@ -736,7 +1007,7 @@ function matchCard(m){
     <div class="refs">
       ${chips}${noneWarn}
       <div class="picker">
-        <button class="addref" data-pick="${m.id}">+ zuteilen</button>
+        <button class="addref" data-pick="${m.id}">+ assign</button>
       </div>
     </div>
   </div>`;
@@ -748,13 +1019,13 @@ function pickerBody(matchId, query=''){
   const busy = busyMap(state.selDate,state.selTime);
   const q=query.trim().toLowerCase();
   let refs = activeRefs();
-  if(!refs.length) return `<div class="opt empty">Noch keine Schiedsrichter erfasst.<br>Lege sie unter <b>Einstellungen</b> an.</div>`;
+  if(!refs.length) return `<div class="opt empty">No referees in this event yet.<br>Add them in <b>Settings</b>.</div>`;
   if(q) refs = refs.filter(r=>r.name.toLowerCase().includes(q));
-  if(!refs.length) return `<div class="opt empty">Kein Treffer für „${esc(query)}“.</div>`;
+  if(!refs.length) return `<div class="opt empty">No match for "${esc(query)}".</div>`;
   return refs.map(r=>{
     const on=asg.has(r.id);
     const other=(busy[r.id]||[]).filter(x=>x.id!==matchId);
-    const busyNote = other.length ? `<span class="busy">belegt ${esc(other.map(x=>x.court).join(', '))}</span>` : '';
+    const busyNote = other.length ? `<span class="busy">busy ${esc(other.map(x=>x.court).join(', '))}</span>` : '';
     return `<div class="opt${on?' on':''}" data-toggle="${matchId}|${r.id}">
       <span class="box">${on?'✓':''}</span><span class="nm">${esc(r.name)}</span>${busyNote}</div>`;
   }).join('');
@@ -763,7 +1034,7 @@ async function toggleAssign(mid,rid){
   const on=(state.assignments[mid]||[]).includes(rid);
   const q = $('#__pickerSearch') ? $('#__pickerSearch').value : '';
   try{ on? await store.unassign(mid,rid) : await store.assign(mid,rid); }
-  catch(err){ toast('Fehler: '+(err.message||err)); return; }
+  catch(err){ toast('Error: '+(err.message||err)); return; }
   renderPlan();
   const btn=$(`[data-pick="${mid}"]`);
   if(btn){ openPicker(mid,btn); const s=$('#__pickerSearch'); if(s&&q){ s.value=q; $('#__pickerList').innerHTML=pickerBody(mid,q); } }
@@ -772,7 +1043,7 @@ function openPicker(matchId, anchorBtn){
   closePicker();
   pickerMatchId=matchId;
   const menu=document.createElement('div'); menu.className='menu'; menu.id='__menu';
-  menu.innerHTML = `<div class="mh"><input type="text" id="__pickerSearch" placeholder="Schiedsrichter suchen…" autocomplete="off"></div>
+  menu.innerHTML = `<div class="mh"><input type="text" id="__pickerSearch" placeholder="Search referee…" autocomplete="off"></div>
     <div id="__pickerList">${pickerBody(matchId)}</div>`;
   document.body.appendChild(menu);
   // menu lives on <body>, so it handles its own clicks (delegation from #view-plan can't reach it)
@@ -807,11 +1078,11 @@ function renderSidePanel(ms){
   ac.className='tag-count'+(avail.length===0?' zero':'');
   $('#availList').innerHTML = avail.map(r=>`<span class="t">${esc(r.name)}</span>`).join('');
   $('#availEmpty').style.display = (refs.length>0 && avail.length===0)?'block':'none';
-  if(refs.length===0) $('#availList').innerHTML=`<span class="empty-note">Keine Schiedsrichter erfasst.</span>`;
+  if(refs.length===0) $('#availList').innerHTML=`<span class="empty-note">No referees in this event.</span>`;
 
   // conflicts = referee on 2+ matches at this time
   const conf = refs.map(r=>({r,ms:(busy[r.id]||[])})).filter(x=>x.ms.length>1);
-  $('#conflicts').innerHTML = conf.map(x=>`<div class="conflict">⚠ <div><b>${esc(x.r.name)}</b> ist doppelt eingeteilt: ${esc(x.ms.map(m=>m.court).join(', '))}</div></div>`).join('');
+  $('#conflicts').innerHTML = conf.map(x=>`<div class="conflict">⚠ <div><b>${esc(x.r.name)}</b> is double-booked: ${esc(x.ms.map(m=>m.court).join(', '))}</div></div>`).join('');
 
   // workload for the whole day
   const dayMatches = state.matches.filter(m=>(m.match_date||'—')===state.selDate);
@@ -822,7 +1093,7 @@ function renderSidePanel(ms){
   $('#workload').innerHTML = rows.length? rows.map(r=>{
     const c=counts[r.id]; const w=Math.round((c/max)*100);
     return `<div class="row"><span class="nm">${esc(r.name)}</span><span class="bar" style="width:${Math.max(c?8:0,w*0.6)}px"></span><span class="n num">${c}</span></div>`;
-  }).join('') : `<span class="empty-note">Keine Schiedsrichter erfasst.</span>`;
+  }).join('') : `<span class="empty-note">No referees in this event.</span>`;
 }
 
 /* ============================================================
@@ -846,17 +1117,17 @@ function renderBoard(){
     return `<button class="pill${d===state.boardDate?' active':''}" data-bdate="${esc(d)}">${esc(d)} <small class="num">${n}</small></button>`;
   }).join('');
 
-  // referee filter dropdown
+  // referee filter dropdown (nur dem Event zugeordnete)
   const sel=$('#refFilter');
   const cur=state.refFilter||'';
-  sel.innerHTML = `<option value="">Alle Schiedsrichter</option>` +
-    state.referees.slice().sort((a,b)=>a.name.localeCompare(b.name,'de'))
+  sel.innerHTML = `<option value="">All referees</option>` +
+    activeRefs().slice().sort((a,b)=>a.name.localeCompare(b.name,'de'))
       .map(r=>`<option value="${esc(r.name)}"${r.name===cur?' selected':''}>${esc(r.name)}</option>`).join('');
   sel.value=cur;
 
   // active-filter chip
   $('#filterActive').innerHTML = cur
-    ? `<div style="margin-bottom:14px"><span class="filter-note">Gefiltert: ${esc(cur)} <button id="clearFilter" title="Filter aufheben">×</button></span></div>` : '';
+    ? `<div style="margin-bottom:14px"><span class="filter-note">Filtered: ${esc(cur)} <button id="clearFilter" title="Clear filter">×</button></span></div>` : '';
 
   const filterId = cur ? refIdByName(cur) : null;
   const ts=timesFor(state.boardDate);
@@ -871,7 +1142,7 @@ function renderBoard(){
       const alt=/^SBC/i.test(m.court);
       const refs = asg.length
         ? asg.map(rid=>{ const nm=refName(rid); const hi=cur && nm.toLowerCase()===cur.toLowerCase(); return `<span class="t${hi?' hi':''}">${esc(nm)}</span>`; }).join('')
-        : `<span class="none">kein Schiedsrichter</span>`;
+        : `<span class="none">no referee</span>`;
       html += `<div class="brow">
         <span class="bc${alt?' alt':''}">${esc(m.court||'—')}</span>
         <div class="bmatch"><b>${esc(m.home_team)} <span style="color:var(--muted);font-weight:600">vs</span> ${esc(m.away_team)}</b>
@@ -881,42 +1152,105 @@ function renderBoard(){
     });
     html += `</div>`;
   });
-  $('#boardList').innerHTML = html || `<p class="empty-note">Keine Begegnungen${cur?` für ${esc(cur)}`:''} an diesem Spieltag.</p>`;
+  $('#boardList').innerHTML = html || `<p class="empty-note">No matches${cur?` for ${esc(cur)}`:''} on this day.</p>`;
 }
 
-/* ---- PDF / print document ---- */
+/* ---- PDF / print document — kompakt, mehrspaltig, wenige A4-Seiten ---- */
 function buildPrintDoc(){
   const date=state.boardDate; const cur=state.refFilter||'';
   const filterId = cur ? refIdByName(cur) : null;
   const ts=timesFor(date);
-  let body='';
+  let body='', count=0;
   ts.forEach(t=>{
     let ms=matchesAt(date,t);
     if(filterId!=null) ms=ms.filter(m=>(state.assignments[m.id]||[]).includes(filterId));
     if(!ms.length) return;
-    body += `<div class="pr-time">${esc(t)} Uhr</div>`;
+    body += `<div class="pr-time">${esc(t)}</div>`;
     ms.forEach(m=>{
+      count++;
       const asg=(state.assignments[m.id]||[]).map(refName);
-      const refsLine = asg.length
-        ? `<div class="pr-refs"><span class="lb">SR:</span> ${esc(asg.join(', '))}</div>`
-        : `<div class="pr-refs empty"><span class="lb">SR:</span> — nicht eingeteilt</div>`;
+      const sr = asg.length
+        ? `<div class="pr-sr"><span class="lb">Ref:</span> ${esc(asg.join(', '))}</div>`
+        : `<div class="pr-sr empty"><span class="lb">Ref:</span> not assigned</div>`;
+      const g = m.grp ? `<span class="pr-g">${esc(m.grp)}</span>` : '';
       body += `<div class="pr-m">
-        <div class="pr-line"><span class="c">${esc(m.court||'')}</span>
-          <span>${esc(m.home_team)} vs ${esc(m.away_team)}</span>
-          <span class="g">${esc([m.event,m.grp,m.venue].filter(Boolean).join(' · '))}</span></div>
-        ${refsLine}</div>`;
+        <div class="pr-row"><span class="pr-c">${esc(m.court||'')}</span>
+          <span class="pr-t">${esc(m.home_team)} – ${esc(m.away_team)}</span>${g}</div>
+        ${sr}</div>`;
     });
   });
-  const sub = cur ? `Schiedsrichter-Einteilung — nur ${esc(cur)}` : 'Schiedsrichter-Einteilung';
+  // mehr Begegnungen -> 3 Spalten, damit alles auf wenige Seiten passt
+  const cols = count>60 ? ' cols3' : '';
+  const sub = cur ? `Referee schedule – only ${esc(cur)}` : 'Referee schedule';
   $('#printArea').innerHTML = `<div class="pr-head"><h1>${sub}</h1>
-    <div class="m">Spieltag ${esc(date)} · erstellt ${new Date().toLocaleString('de-DE')}</div></div>${body||'<p>Keine Begegnungen.</p>'}`;
+    <div class="m">Day ${esc(date)} · ${count} match${count===1?'':'es'} · as of ${new Date().toLocaleString('en-GB')}</div></div>
+    <div class="pr-list${cols}">${body||'<p>No matches.</p>'}</div>`;
 }
-function doPrint(){ buildPrintDoc(); window.print(); }
+function doPrint(){ buildPrintDoc(); $('#printArea').className=''; window.print(); }
+
+/* ============================================================
+   COURT PLAN (grid: times × courts)
+   ============================================================ */
+function courtsOrder(date){
+  const first={};
+  state.matches.filter(m=>(m.match_date||'—')===date).forEach(m=>{
+    const c=m.court||'—'; if(!(c in first)) first[c]=m.sort_order??0;
+  });
+  return Object.keys(first).sort((a,b)=>first[a]-first[b]);
+}
+function courtCellHTML(m){
+  if(!m) return `<div class="cp-cell cp-empty"></div>`;
+  const asg=(state.assignments[m.id]||[]).map(refName);
+  const sr = asg.length
+    ? `<div class="sr">${asg.map(n=>`<span class="t">${esc(n)}</span>`).join('')}</div>`
+    : `<div class="sr"><span class="none">– no ref</span></div>`;
+  const seed = s => s?`<span style="color:var(--muted);font-weight:500;font-size:.8em"> [${esc(s)}]</span>`:'';
+  return `<div class="cp-cell">
+    <div class="tm">${esc(m.home_team)}${seed(m.home_seed)}<br>${esc(m.away_team)}${seed(m.away_seed)}</div>
+    ${m.grp?`<div class="gp">${esc([m.event,m.grp].filter(Boolean).join(' · '))}</div>`:''}
+    ${sr}</div>`;
+}
+function courtPlanTable(date){
+  const courts=courtsOrder(date); const ts=timesFor(date);
+  if(!courts.length) return '<p class="empty-note">No matches on this day.</p>';
+  // index matches by time+court
+  const idx={}; state.matches.filter(m=>(m.match_date||'—')===date).forEach(m=>{ idx[(m.time||'')+'@@'+(m.court||'—')]=m; });
+  let head=`<tr><th class="tcol">Time</th>${courts.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>`;
+  let rows=ts.map(t=>{
+    const cells=courts.map(c=>`<td>${courtCellHTML(idx[t+'@@'+c])}</td>`).join('');
+    return `<tr><td class="tcell num">${esc(t)}</td>${cells}</tr>`;
+  }).join('');
+  return `<table class="cplan"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+}
+function renderCourtPlan(){
+  const has = state.curEvent && state.matches.length>0;
+  $('#courtsEmpty').style.display=has?'none':'block';
+  $('#courtsBody').style.display=has?'block':'none';
+  if(!has) return;
+  const ds=dates();
+  if(!state.courtsDate || !ds.includes(state.courtsDate)) state.courtsDate=ds[0];
+  $('#courtsDatePills').style.display = ds.length>1?'flex':'none';
+  $('#courtsDatePills').innerHTML = ds.map(d=>{
+    const n=state.matches.filter(m=>(m.match_date||'—')===d).length;
+    return `<button class="pill${d===state.courtsDate?' active':''}" data-cdate="${esc(d)}">${esc(d)} <small class="num">${n}</small></button>`;
+  }).join('');
+  $('#courtPlan').innerHTML = courtPlanTable(state.courtsDate);
+}
+function doPrintCourts(){
+  const ev=curEventObj(); const date=state.courtsDate;
+  $('#printArea').innerHTML = `<div class="cp-print">
+    <div class="pr-head"><h1>Court Plan${ev?` – ${esc(ev.name)}`:''}</h1>
+      <div class="m">${esc(date)} · created ${new Date().toLocaleString('en-GB')}</div></div>
+    ${courtPlanTable(date)}</div>`;
+  $('#printArea').className='landscape';
+  window.print();
+}
 
 /* ---- share links ---- */
 function baseUrl(){ return location.origin + location.pathname; }
 function shareLink(refName){
   let u = baseUrl()+'?view=1';
+  if(state.curEvent) u += '&event='+encodeURIComponent(state.curEvent);
   if(refName) u += '&ref='+encodeURIComponent(refName);
   return u;
 }
@@ -924,12 +1258,12 @@ function openShare(){
   const embedded = EMBEDDED_SUPABASE.url && EMBEDDED_SUPABASE.key;
   $('#shareGeneral').value = shareLink('');
   const pick=$('#sharePick');
-  pick.innerHTML = `<option value="">Schiedsrichter wählen…</option>` +
-    state.referees.slice().sort((a,b)=>a.name.localeCompare(b.name,'de')).map(r=>`<option value="${esc(r.name)}">${esc(r.name)}</option>`).join('');
+  pick.innerHTML = `<option value="">Choose referee…</option>` +
+    activeRefs().slice().sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<option value="${esc(r.name)}">${esc(r.name)}</option>`).join('');
   $('#sharePersonal').value='';
   $('#shareWarn').innerHTML = embedded
-    ? 'Der geteilte Link liest live aus Supabase — jede Änderung ist sofort für alle sichtbar.'
-    : '⚠ Damit der Link auf anderen Geräten Daten anzeigt, muss oben im Code <b>EMBEDDED_SUPABASE</b> mit URL + Anon-Key gefüllt und committet sein. Ohne das sieht ein fremder Browser keine Daten.';
+    ? 'The shared link reads live from Supabase — every change is visible to everyone immediately.'
+    : '⚠ For the link to show data on other devices, fill <b>EMBEDDED_SUPABASE</b> (URL + anon key) at the top of the code and commit it. Without it a foreign browser sees no data.';
   $('#shareModal').classList.add('show');
 }
 
@@ -956,7 +1290,9 @@ function renderPreview(){
   const rows=state.parsed;
   $('#previewCard').style.display = rows.length?'block':'none';
   if(!rows.length) return;
-  $('#prevCount').textContent = `${rows.length} Begegnungen`;
+  const ev=curEventObj();
+  $('#impTargetEvent').textContent = ev? ev.name : '— no event selected —';
+  $('#prevCount').textContent = `${rows.length} matches`;
   const d = rows.find(r=>r.match_date)?.match_date || '';
   $('#impDate').value = d;
   $('#prevBody').innerHTML = rows.map((r,i)=>`<tr>
@@ -973,33 +1309,133 @@ function renderPreview(){
 /* ============================================================
    SETTINGS VIEW
    ============================================================ */
-function renderRefs(){
-  $('#refTotal').textContent = state.referees.length? `${state.referees.length} erfasst` : '';
-  $('#refList').innerHTML = state.referees.length ? state.referees.map(r=>`
-    <div class="r">
-      <div>
-        <div class="nm">${esc(r.name)}</div>
-        ${r.note?`<div class="note">${esc(r.note)}</div>`:''}
-      </div>
-      <span class="sp"></span>
-      <button class="swatch ${r.active!==false?'on':'off'}" data-toggle-active="${r.id}">${r.active!==false?'aktiv':'inaktiv'}</button>
-      <button class="icon" data-del-ref="${r.id}" title="Löschen">🗑</button>
-    </div>`).join('') : `<p class="empty-note">Noch keine Schiedsrichter. Oben hinzufügen.</p>`;
+/* ---- avatars & photo ---- */
+function initials(name){ return (name||'?').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
+function avatar(r, cls='sm'){
+  if(r && r.photo) return `<span class="avatar ${cls}" style="background-image:url('${esc(r.photo)}')"></span>`;
+  return `<span class="avatar ${cls}">${esc(initials(r&&r.name))}</span>`;
+}
+function downscaleImage(file, max=256){
+  return new Promise((res,rej)=>{
+    const img=new Image(); const rd=new FileReader();
+    rd.onload=()=>{ img.onload=()=>{
+      let {width:w,height:h}=img; const s=Math.min(1,max/Math.max(w,h)); w=Math.round(w*s); h=Math.round(h*s);
+      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+      res(c.toDataURL('image/jpeg',0.82));
+    }; img.onerror=rej; img.src=rd.result; };
+    rd.onerror=rej; rd.readAsDataURL(file);
+  });
 }
 
-const SQL = `-- Referee Desk · Supabase Schema
+/* ---- referee edit state ---- */
+let refEdit={ id:null, photo:'' };
+function refFormRead(){ return {
+  name:$('#refName').value.trim(), location:$('#refLocation').value.trim(), level:$('#refLevel').value.trim(),
+  phone:$('#refPhone').value.trim(), email:$('#refEmail').value.trim(), note:$('#refNote').value.trim(), photo:refEdit.photo||'' }; }
+function refFormClear(){ ['refName','refLocation','refLevel','refPhone','refEmail','refNote'].forEach(id=>$('#'+id).value='');
+  refEdit={id:null,photo:''}; syncPhotoPrev(); $('#btnSaveRef').textContent='Add to database';
+  $('#btnCancelRefEdit').style.display='none'; $('#refEditHint').textContent=''; }
+function refFormFill(r){ refEdit={id:r.id,photo:r.photo||''};
+  $('#refName').value=r.name||''; $('#refLocation').value=r.location||''; $('#refLevel').value=r.level||'';
+  $('#refPhone').value=r.phone||''; $('#refEmail').value=r.email||''; $('#refNote').value=r.note||'';
+  syncPhotoPrev(); $('#btnSaveRef').textContent='Save changes'; $('#btnCancelRefEdit').style.display='inline-flex';
+  $('#refEditHint').textContent='Editing: '+(r.name||''); }
+function syncPhotoPrev(){ const p=$('#refPhotoPrev');
+  if(refEdit.photo){ p.style.backgroundImage=`url('${refEdit.photo}')`; p.textContent=''; $('#btnRefPhotoClear').style.display='inline-flex'; }
+  else { p.style.backgroundImage=''; p.textContent='+'; $('#btnRefPhotoClear').style.display='none'; } }
+
+function renderRefs(){
+  $('#refTotal').textContent = state.referees.length? `${state.referees.length} in database` : '';
+  const q=($('#refSearch')?.value||'').trim().toLowerCase();
+  let list=state.referees;
+  if(q) list=list.filter(r=>[r.name,r.location,r.level,r.email,r.phone].some(v=>(v||'').toLowerCase().includes(q)));
+  $('#refList').innerHTML = list.length ? list.map(r=>{
+    const sub=[r.location, r.phone, r.email].filter(Boolean).join(' · ');
+    return `<div class="dbrow">
+      ${avatar(r,'sm')}
+      <div class="info"><div class="nm">${esc(r.name)}</div>${sub?`<div class="sub">${esc(sub)}</div>`:''}</div>
+      ${r.level?`<span class="lvl">${esc(r.level)}</span>`:''}
+      <button class="icon" data-edit-ref="${r.id}" title="Edit">✎</button>
+      <button class="icon" data-del-ref="${r.id}" title="Delete">🗑</button>
+    </div>`;
+  }).join('') : `<p class="empty-note">${state.referees.length?'No match.':'Nobody in the database yet. Add someone above.'}</p>`;
+  renderEnroll();
+}
+
+function renderEnroll(){
+  const card=$('#enrollCard'); const ev=curEventObj();
+  if(!ev){ card.style.display='none'; return; }
+  card.style.display='block';
+  const ids=enrolledIds();
+  $('#enrollInfo').textContent = `${ids.size} of ${state.referees.length} · ${ev.name}`;
+  $('#enrollList').innerHTML = state.referees.length ? state.referees.map(r=>{
+    const on=ids.has(r.id);
+    const sub=[r.location,r.level].filter(Boolean).join(' · ');
+    return `<div class="dbrow">
+      <span class="enroll-check${on?' on':''}" data-enroll="${r.id}">${on?'✓':''}</span>
+      ${avatar(r,'sm')}
+      <div class="info"><div class="nm">${esc(r.name)}</div>${sub?`<div class="sub">${esc(sub)}</div>`:''}</div>
+    </div>`;
+  }).join('') : `<p class="empty-note">Add referees to the database first.</p>`;
+}
+
+function renderEvents(){
+  $('#evTotal').textContent = state.events.length? `${state.events.length} saved` : '';
+  $('#eventList').innerHTML = state.events.length ? state.events.map(e=>{
+    const meta=[e.location, [e.start_date,e.end_date].filter(Boolean).join(' – ')].filter(Boolean).join(' · ');
+    const cur=e.id===state.curEvent;
+    return `<div class="ev">
+      <div><div class="nm">${esc(e.name)}</div>${meta?`<div class="meta">${esc(meta)}</div>`:''}</div>
+      <span class="sp"></span>
+      ${cur?`<span class="badge-cur">active</span>`:`<button class="btn ghost sm" data-use-event="${e.id}">select</button>`}
+      <button class="icon" data-edit-event="${e.id}" title="Rename">✎</button>
+      <button class="icon" data-del-event="${e.id}" title="Delete">🗑</button>
+    </div>`;
+  }).join('') : `<p class="empty-note">No event yet. Create one above.</p>`;
+}
+
+function renderEventSwitch(){
+  const sel=$('#eventSwitch');
+  if(!state.events.length){ sel.style.display='none'; return; }
+  sel.style.display='inline-block';
+  sel.innerHTML=state.events.map(e=>`<option value="${e.id}"${e.id===state.curEvent?' selected':''}>${esc(e.name)}</option>`).join('');
+  sel.value=state.curEvent||'';
+}
+
+const SQL = `-- Referee Desk · Supabase schema (run once in the SQL editor)
 create extension if not exists "pgcrypto";
+
+create table if not exists events (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  location   text default '',
+  start_date text default '',
+  end_date   text default '',
+  created_at timestamptz default now()
+);
 
 create table if not exists referees (
   id         uuid primary key default gen_random_uuid(),
   name       text not null,
+  location   text default '',
+  level      text default '',
+  phone      text default '',
+  email      text default '',
+  photo      text default '',       -- small base64 data URL (optional)
   note       text default '',
   active     boolean default true,
   created_at timestamptz default now()
 );
 
+create table if not exists event_referees (
+  event_id    uuid references events(id)   on delete cascade,
+  referee_id  uuid references referees(id) on delete cascade,
+  primary key (event_id, referee_id)
+);
+
 create table if not exists matches (
   id         uuid primary key default gen_random_uuid(),
+  event_id   uuid references events(id) on delete cascade,
   match_date text,
   time       text,
   event      text,
@@ -1007,9 +1443,9 @@ create table if not exists matches (
   court      text,
   venue      text,
   home_team  text,
-  home_seed  int,
+  home_seed  text,
   away_team  text,
-  away_seed  int,
+  away_seed  text,
   sort_order int default 0,
   created_at timestamptz default now()
 );
@@ -1020,16 +1456,28 @@ create table if not exists assignments (
   primary key (match_id, referee_id)
 );
 
--- ============================================================
--- RLS / Zugriffsschutz mit Supabase-Auth
--- Modell A (Standard, empfohlen): LESEN für alle (damit der geteilte
--- Nur-Lese-Link funktioniert), SCHREIBEN nur für eingeloggte Benutzer.
--- ============================================================
-alter table referees    enable row level security;
-alter table matches     enable row level security;
-alter table assignments enable row level security;
+-- Migration for databases created with an earlier version:
+alter table matches   add column if not exists event_id uuid references events(id) on delete cascade;
+alter table matches   alter column home_seed type text using home_seed::text;
+alter table matches   alter column away_seed type text using away_seed::text;
+alter table referees  add column if not exists location text default '';
+alter table referees  add column if not exists level    text default '';
+alter table referees  add column if not exists phone    text default '';
+alter table referees  add column if not exists email    text default '';
+alter table referees  add column if not exists photo    text default '';
 
--- alte, offene Policies der ersten Version entfernen (falls vorhanden)
+-- ============================================================
+-- Row Level Security with Supabase Auth
+-- Model A (default, recommended): READ open (so the shared read-only
+-- link works), WRITE only for signed-in users.
+-- ============================================================
+alter table events         enable row level security;
+alter table referees       enable row level security;
+alter table event_referees enable row level security;
+alter table matches        enable row level security;
+alter table assignments    enable row level security;
+
+-- remove the open policies from the first version (if present)
 drop policy if exists "anon all referees"   on referees;
 drop policy if exists "anon all matches"     on matches;
 drop policy if exists "anon all assignments" on assignments;
@@ -1037,7 +1485,7 @@ drop policy if exists "anon all assignments" on assignments;
 do $$
 declare t text;
 begin
-  foreach t in array array['referees','matches','assignments'] loop
+  foreach t in array array['events','referees','event_referees','matches','assignments'] loop
     execute format('drop policy if exists "read all" on %I', t);
     execute format('drop policy if exists "write authenticated" on %I', t);
     execute format('create policy "read all" on %I for select using (true)', t);
@@ -1046,21 +1494,20 @@ begin
 end $$;
 
 -- ------------------------------------------------------------
--- Modell B (komplett abgeriegelt): AUCH Lesen nur für Eingeloggte.
--- Dann im HTML  VIEW_REQUIRES_LOGIN = true  setzen, sonst zeigt der
--- Ansichts-Link nichts an. Zum Aktivieren die 3 Zeilen oben durch die
--- 'read authenticated'-Variante ersetzen:
---   create policy "read authenticated" on <tabelle> for select to authenticated using (true);
+-- Model B (fully locked): READ only for signed-in users too.
+-- Then set  VIEW_REQUIRES_LOGIN = true  in the HTML, otherwise the
+-- shared view link shows nothing. Replace the read policy above with:
+--   create policy "read authenticated" on <table> for select to authenticated using (true);
 -- ------------------------------------------------------------
 
--- Benutzer anlegen: Supabase Dashboard -> Authentication -> Users -> "Add user".
--- Selbstregistrierung verhindern: Authentication -> Providers -> Email ->
--- "Allow new users to sign up" deaktivieren.`;
+-- Add users: Supabase dashboard -> Authentication -> Users -> "Add user".
+-- Prevent self sign-up: Authentication -> Providers -> Email ->
+-- turn off "Allow new users to sign up".`;
 
 function setBeacon(){
   const label = state.backend==='supabase'
-    ? (state.connected? 'Supabase verbunden' : 'Supabase nicht verbunden')
-    : 'Lokaler Speicher';
+    ? (state.connected? 'Supabase connected' : 'Supabase not connected')
+    : 'Local storage';
   const cls = state.backend==='supabase' ? (state.connected?'on':'off') : 'local';
   const b=$('#beacon'); b.className='beacon '+cls; $('#beaconTxt').textContent=label;
   const b2=$('#beacon2'); if(b2){ b2.className='beacon '+cls; $('#beacon2Txt').textContent=label; }
@@ -1076,7 +1523,7 @@ function saveCfg(c){ localStorage.setItem(LS.cfg,JSON.stringify(c)); }
 async function connect(cfg,{silent=false}={}){
   if(cfg.backend==='supabase' && cfg.url && cfg.key){
     try{
-      if(!window.supabase) throw new Error('Supabase-Bibliothek nicht geladen');
+      if(!window.supabase) throw new Error('Supabase library not loaded');
       state.supa = window.supabase.createClient(cfg.url,cfg.key);
       state.backend='supabase'; state.supaUrl=cfg.url; state.connected=true;
       // Auth-Zustand beobachten
@@ -1087,15 +1534,25 @@ async function connect(cfg,{silent=false}={}){
       await afterAuthDecision({silent});
     }catch(e){
       state.connected=false; state.backend='supabase';
-      if(!silent) toast('Verbindung fehlgeschlagen: '+(e.message||e));
+      if(!silent) toast('Connection failed: '+(e.message||e));
       console.error(e); setBeacon();
     }
   } else {
     state.backend='local'; state.supa=null; state.connected=false; state.user=null;
     setBeacon(); hideGate();
-    await store.loadAll(); renderAll(); updateUserChip();
+    await store.loadBase(); pickCurrentEvent(); await store.loadEventData();
+    renderAll(); updateUserChip();
     if(VIEW_ONLY) enterViewOnly();
   }
+}
+function pickCurrentEvent(){
+  const saved=(()=>{ try{ return localStorage.getItem(LS.curEvent)||''; }catch(e){ return ''; } })();
+  const ids=state.events.map(e=>e.id);
+  let pick = (URL_EVENT && ids.includes(URL_EVENT)) ? URL_EVENT
+           : (saved && ids.includes(saved)) ? saved
+           : (state.events[0]?.id || null);
+  state.curEvent = pick;
+  if(pick){ try{ localStorage.setItem(LS.curEvent,pick); }catch(e){} }
 }
 
 /* ============================================================
@@ -1107,8 +1564,8 @@ function authRequired(){
 async function afterAuthDecision({silent=false}={}){
   if(authRequired() && !state.user){ showGate(); return; }
   hideGate();
-  try{ await store.loadAll(); }
-  catch(e){ console.error(e); if(!silent) toast('Laden fehlgeschlagen: '+(e.message||e)); }
+  try{ await store.loadBase(); pickCurrentEvent(); await store.loadEventData(); }
+  catch(e){ console.error(e); if(!silent) toast('Loading failed: '+(e.message||e)); }
   renderAll(); updateUserChip();
   if(VIEW_ONLY) enterViewOnly();
 }
@@ -1122,24 +1579,24 @@ function handleAuth(evt,session){
 function showGate(){
   $('#gate').style.display='flex';
   $('#gateNote').innerHTML = VIEW_ONLY
-    ? 'Diese Ansicht ist geschützt. Bitte anmelden.'
-    : 'Kein Konto? Der Turnier-Administrator legt Zugänge in Supabase an.';
+    ? 'This view is protected. Please sign in.'
+    : 'No account? The tournament admin creates access in Supabase.';
   setTimeout(()=>{ const el=$('#loginEmail'); if(el) el.focus(); },40);
 }
 function hideGate(){ $('#gate').style.display='none'; }
 function updateUserChip(){
   const chip=$('#userChip'); const authed = state.backend==='supabase' && state.user;
   chip.style.display = authed ? 'flex':'none';
-  if(authed) $('#userEmail').textContent = state.user.email||'angemeldet';
+  if(authed) $('#userEmail').textContent = state.user.email||'signed in';
   // Konto-Karte in den Einstellungen
   const card=$('#accountCard');
   if(state.backend==='supabase'){
     card.style.display='block';
     $('#accountRow').innerHTML = state.user
-      ? `<span class="em">${esc(state.user.email||'angemeldet')}</span>
+      ? `<span class="em">${esc(state.user.email||'signed in')}</span>
          <a class="btn ghost sm" href="${esc(dashUsersUrl())}" target="_blank" rel="noopener">Benutzer verwalten</a>
-         <button class="btn ghost sm" id="btnSignOut2">Abmelden</button>`
-      : `<span class="empty-note">Nicht angemeldet.</span>`;
+         <button class="btn ghost sm" id="btnSignOut2">Sign out</button>`
+      : `<span class="empty-note">Not signed in.</span>`;
   } else {
     card.style.display='none';
   }
@@ -1151,41 +1608,50 @@ function dashUsersUrl(){
 async function doLogin(){
   const email=$('#loginEmail').value.trim(), pass=$('#loginPass').value;
   const err=$('#loginErr'); err.textContent=''; err.classList.remove('ok');
-  if(!email||!pass){ err.textContent='Bitte E-Mail und Passwort eingeben.'; return; }
-  if(!state.supa){ err.textContent='Kein Supabase-Zugang konfiguriert.'; return; }
-  const btn=$('#btnLogin'); btn.disabled=true; btn.textContent='Anmelden…';
+  if(!email||!pass){ err.textContent='Please enter email and password.'; return; }
+  if(!state.supa){ err.textContent='No Supabase access configured.'; return; }
+  const btn=$('#btnLogin'); btn.disabled=true; btn.textContent='Signing in…';
   const { error } = await state.supa.auth.signInWithPassword({email,password:pass});
-  btn.disabled=false; btn.textContent='Anmelden';
-  if(error){ err.textContent = /invalid/i.test(error.message)?'E-Mail oder Passwort falsch.':error.message; }
+  btn.disabled=false; btn.textContent='Sign in';
+  if(error){ err.textContent = /invalid/i.test(error.message)?'Wrong email or password.':error.message; }
   // Erfolg -> onAuthStateChange('SIGNED_IN') übernimmt
 }
 async function doSendReset(){
   const email=$('#resetEmail').value.trim(); const msg=$('#resetMsg'); msg.textContent=''; msg.classList.remove('ok');
-  if(!email){ msg.textContent='Bitte E-Mail eingeben.'; return; }
-  if(!state.supa){ msg.textContent='Kein Supabase-Zugang konfiguriert.'; return; }
+  if(!email){ msg.textContent='Please enter an email.'; return; }
+  if(!state.supa){ msg.textContent='No Supabase access configured.'; return; }
   const { error } = await state.supa.auth.resetPasswordForEmail(email,{ redirectTo: baseUrl() });
   if(error){ msg.textContent=error.message; }
-  else { msg.classList.add('ok'); msg.textContent='Reset-Link gesendet – bitte E-Mail prüfen.'; }
+  else { msg.classList.add('ok'); msg.textContent='Reset link sent – please check your email.'; }
 }
 async function doSetNewPass(){
   const p=$('#newPass').value; const msg=$('#recoveryMsg'); msg.textContent=''; msg.classList.remove('ok');
-  if(!p||p.length<6){ msg.textContent='Mindestens 6 Zeichen.'; return; }
+  if(!p||p.length<6){ msg.textContent='At least 6 characters.'; return; }
   const { error } = await state.supa.auth.updateUser({ password:p });
   if(error){ msg.textContent=error.message; return; }
   $('#recoveryModal').classList.remove('show'); $('#newPass').value='';
-  toast('Passwort aktualisiert'); afterAuthDecision();
+  toast('Password updated'); afterAuthDecision();
 }
 async function doSignOut(){
   if(state.supa){ try{ await state.supa.auth.signOut(); }catch(e){} }
   state.user=null; updateUserChip(); showGate();
 }
 
-function renderAll(){ renderPlan(); renderRefs(); renderBoard(); }
+function renderAll(){ renderEventSwitch(); renderEvents(); renderPlan(); renderRefs(); renderBoard(); renderCourtPlan(); }
+
+async function selectEvent(id){
+  state.curEvent=id;
+  try{ localStorage.setItem(LS.curEvent,id); }catch(e){}
+  state.selDate=null; state.selTime=null; state.boardDate=null;
+  try{ await store.loadEventData(); }catch(e){ toast('Loading failed: '+(e.message||e)); }
+  renderAll();
+}
 function switchView(name){
   $$('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.view===name));
   $$('.view').forEach(v=>v.classList.remove('active'));
   const el=$('#view-'+name); if(el) el.classList.add('active');
   if(name==='board') renderBoard();
+  if(name==='courts') renderCourtPlan();
 }
 
 /* ============================================================
@@ -1204,7 +1670,7 @@ $('#view-plan').addEventListener('click',async e=>{
   const pk=e.target.closest('[data-pick]'); if(pk){ e.stopPropagation(); openPicker(pk.dataset.pick,pk); return; }
   const un=e.target.closest('[data-unassign]'); if(un){
     const [mid,rid]=un.dataset.unassign.split('|');
-    try{ await store.unassign(mid,rid); renderPlan(); }catch(err){ toast('Fehler: '+(err.message||err)); }
+    try{ await store.unassign(mid,rid); renderPlan(); }catch(err){ toast('Error: '+(err.message||err)); }
     return;
   }
 });
@@ -1215,8 +1681,11 @@ $('#view-board').addEventListener('click',e=>{
   const cf=e.target.closest('#clearFilter'); if(cf){ state.refFilter=''; renderBoard(); return; }
 });
 $('#refFilter').addEventListener('change',e=>{ state.refFilter=e.target.value; renderBoard(); });
-$('#btnRefreshBoard').addEventListener('click',async ()=>{ try{ await store.loadAll(); renderBoard(); toast('Aktualisiert'); }catch(err){ toast('Fehler: '+(err.message||err)); } });
+$('#btnRefreshBoard').addEventListener('click',async ()=>{ try{ await store.loadAll(); renderBoard(); toast('Refreshed'); }catch(err){ toast('Error: '+(err.message||err)); } });
 $('#btnPrint').addEventListener('click',doPrint);
+// court plan
+$('#view-courts').addEventListener('click',e=>{ const d=e.target.closest('[data-cdate]'); if(d){ state.courtsDate=d.dataset.cdate; renderCourtPlan(); } });
+$('#btnPrintCourts').addEventListener('click',doPrintCourts);
 $('#btnShare').addEventListener('click',openShare);
 
 // share modal
@@ -1225,8 +1694,8 @@ $('#shareModal').addEventListener('click',e=>{ if(e.target.id==='shareModal') $(
 $('#sharePick').addEventListener('change',e=>{ $('#sharePersonal').value = e.target.value? shareLink(e.target.value):''; });
 $('#shareModal').addEventListener('click',async e=>{
   const c=e.target.closest('[data-copy]'); if(!c) return;
-  const val=$('#'+c.dataset.copy).value; if(!val){ toast('Erst einen Schiedsrichter wählen'); return; }
-  try{ await navigator.clipboard.writeText(val); toast('Link kopiert'); }catch{ toast('Kopieren nicht möglich'); }
+  const val=$('#'+c.dataset.copy).value; if(!val){ toast('Choose a referee first'); return; }
+  try{ await navigator.clipboard.writeText(val); toast('Link copied'); }catch{ toast('Copy not possible'); }
 });
 
 // import: file
@@ -1237,14 +1706,14 @@ $('#fileInput').addEventListener('change',async e=>{
     let txt='';
     if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){ txt=await extractPdf(f); }
     else { txt=await f.text(); }
-    $('#importText').value=txt; toast('Datei geladen — jetzt „Analysieren“');
-  }catch(err){ toast('Datei-Fehler: '+(err.message||err)); console.error(err); }
+    $('#importText').value=txt; toast('File loaded — now click Analyze');
+  }catch(err){ toast('File error: '+(err.message||err)); console.error(err); }
 });
 $('#btnParse').addEventListener('click',()=>{
   const txt=$('#importText').value.trim();
-  if(!txt){ toast('Bitte Text einfügen oder Datei laden'); return; }
+  if(!txt){ toast('Please paste text or load a file'); return; }
   state.parsed=parseSchedule(txt);
-  $('#parseInfo').textContent = state.parsed.length? `${state.parsed.length} Begegnungen erkannt` : 'Keine Begegnungen erkannt — Format prüfen';
+  $('#parseInfo').textContent = state.parsed.length? `${state.parsed.length} matches detected` : 'No matches detected — check the format';
   renderPreview();
 });
 $('#prevBody').addEventListener('input',e=>{
@@ -1254,6 +1723,7 @@ $('#prevBody').addEventListener('input',e=>{
 $('#btnCancelImport').addEventListener('click',()=>{ state.parsed=[]; $('#previewCard').style.display='none'; $('#parseInfo').textContent=''; });
 $('#btnImport').addEventListener('click',async ()=>{
   if(!state.parsed.length) return;
+  if(!state.curEvent){ toast('Please create and select an event first'); return; }
   const date=$('#impDate').value.trim();
   const rows=state.parsed.map(r=>({
     match_date: r.match_date||date||null, time:r.time||'', event:r.event||'', grp:r.grp||'',
@@ -1265,29 +1735,72 @@ $('#btnImport').addEventListener('click',async ()=>{
       const dset=[...new Set(rows.map(r=>r.match_date))];
       for(const d of dset) if(d) await store.clearMatchesForDate(d);
     }
-    await store.addMatches(rows);
-    toast(`${rows.length} Begegnungen importiert`);
+    const {added,skipped}=await store.addMatchesMerged(rows);
+    toast(`${added} added${skipped?`, ${skipped} duplicates skipped`:''}`);
     state.parsed=[]; $('#previewCard').style.display='none'; $('#importText').value=''; $('#parseInfo').textContent='';
     state.selDate=rows[0].match_date; state.selTime=null;
-    renderPlan();
-    $$('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.view==='plan'));
-    $$('.view').forEach(v=>v.classList.remove('active')); $('#view-plan').classList.add('active');
-  }catch(err){ toast('Import-Fehler: '+(err.message||err)); console.error(err); }
+    renderAll();
+    switchView('plan');
+  }catch(err){ toast('Import error: '+(err.message||err)); console.error(err); }
 });
 
-// settings: referees
-$('#btnAddRef').addEventListener('click',async ()=>{
-  const name=$('#refName').value.trim(); if(!name){ toast('Name eingeben'); return; }
-  try{ await store.addReferee({name,note:$('#refNote').value.trim()}); $('#refName').value=''; $('#refNote').value=''; renderRefs(); renderPlan(); }
-  catch(err){ toast('Fehler: '+(err.message||err)); }
+// ===== settings: events =====
+$('#btnAddEvent').addEventListener('click',async ()=>{
+  const name=$('#evName').value.trim(); if(!name){ toast('Enter an event name'); return; }
+  try{
+    const ev=await store.addEvent({name, location:$('#evLocation').value.trim(), start_date:$('#evStart').value.trim(), end_date:$('#evEnd').value.trim()});
+    ['evName','evLocation','evStart','evEnd'].forEach(id=>$('#'+id).value='');
+    if(!state.curEvent) await selectEvent(ev.id); else renderAll();
+    toast('Event created');
+  }catch(err){ toast('Error: '+(err.message||err)); }
 });
-$('#refName').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btnAddRef').click(); });
-$('#refNote').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btnAddRef').click(); });
+$('#eventList').addEventListener('click',async e=>{
+  const use=e.target.closest('[data-use-event]'); if(use){ await selectEvent(use.dataset.useEvent); toast('Event switched'); return; }
+  const ed=e.target.closest('[data-edit-event]'); if(ed){ const ev=state.events.find(x=>x.id===ed.dataset.editEvent);
+    const n=prompt('Event name:', ev.name); if(n!==null && n.trim()){ try{ await store.updateEvent(ev.id,{name:n.trim()}); renderAll(); }catch(err){ toast('Error: '+(err.message||err)); } } return; }
+  const del=e.target.closest('[data-del-event]'); if(del){ const ev=state.events.find(x=>x.id===del.dataset.delEvent);
+    if(confirm(`Delete event "${ev.name}" with all its matches? (The referee database stays.)`)){
+      try{ await store.deleteEvent(ev.id);
+        if(state.curEvent===ev.id){ state.curEvent = state.events[0]?.id || null; try{state.curEvent?localStorage.setItem(LS.curEvent,state.curEvent):localStorage.removeItem(LS.curEvent);}catch(_){} await store.loadEventData(); }
+        renderAll(); toast('Event deleted');
+      }catch(err){ toast('Error: '+(err.message||err)); } } }
+});
+$('#eventSwitch').addEventListener('change',e=>selectEvent(e.target.value));
+
+// ===== settings: referee database =====
+$('#btnRefPhoto').addEventListener('click',()=>$('#refPhotoInput').click());
+$('#refPhotoPrev').addEventListener('click',()=>$('#refPhotoInput').click());
+$('#refPhotoInput').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{ refEdit.photo=await downscaleImage(f); syncPhotoPrev(); }catch(err){ toast('Image error'); }
+  e.target.value='';
+});
+$('#btnRefPhotoClear').addEventListener('click',()=>{ refEdit.photo=''; syncPhotoPrev(); });
+$('#btnSaveRef').addEventListener('click',async ()=>{
+  const data=refFormRead(); if(!data.name){ toast('Enter a name'); return; }
+  try{
+    if(refEdit.id){ await store.updateReferee(refEdit.id,data); toast('Saved'); }
+    else { await store.addReferee(data); toast('Added to database'); }
+    refFormClear(); renderRefs(); renderPlan(); renderBoard();
+  }catch(err){ toast('Error: '+(err.message||err)); }
+});
+$('#btnCancelRefEdit').addEventListener('click',refFormClear);
+$('#refName').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btnSaveRef').click(); });
+$('#refSearch').addEventListener('input',renderRefs);
 $('#refList').addEventListener('click',async e=>{
-  const del=e.target.closest('[data-del-ref]');
-  if(del){ if(confirm('Schiedsrichter löschen? Bestehende Zuteilungen werden entfernt.')){ try{ await store.deleteReferee(del.dataset.delRef); renderRefs(); renderPlan(); }catch(err){ toast('Fehler: '+(err.message||err)); } } return; }
-  const act=e.target.closest('[data-toggle-active]');
-  if(act){ const r=state.referees.find(x=>x.id===act.dataset.toggleActive); try{ await store.updateReferee(r.id,{active:!(r.active!==false)}); renderRefs(); renderPlan(); }catch(err){ toast('Fehler: '+(err.message||err)); } }
+  const ed=e.target.closest('[data-edit-ref]'); if(ed){ const r=state.referees.find(x=>x.id===ed.dataset.editRef); if(r){ refFormFill(r); $('#refName').scrollIntoView({behavior:'smooth',block:'center'}); } return; }
+  const del=e.target.closest('[data-del-ref]'); if(del){ const r=state.referees.find(x=>x.id===del.dataset.delRef);
+    if(confirm(`Delete "${r?.name}" from the database? This removes the person from all events and assignments.`)){
+      try{ await store.deleteReferee(del.dataset.delRef); if(refEdit.id===del.dataset.delRef) refFormClear(); renderRefs(); renderPlan(); renderBoard(); }catch(err){ toast('Error: '+(err.message||err)); } } }
+});
+
+// ===== settings: enrollment per event =====
+$('#enrollList').addEventListener('click',async e=>{
+  const c=e.target.closest('[data-enroll]'); if(!c) return;
+  const rid=c.dataset.enroll; const ids=enrolledIds();
+  try{ ids.has(rid) ? await store.unenroll(state.curEvent,rid) : await store.enroll(state.curEvent,rid);
+    renderEnroll(); renderPlan(); renderBoard();
+  }catch(err){ toast('Error: '+(err.message||err)); }
 });
 
 // settings: backend
@@ -1304,9 +1817,9 @@ $('#btnShowSql').addEventListener('click',()=>{
   const box=$('#sqlBox'); const show=box.style.display==='none';
   box.style.display=show?'block':'none'; $('#sqlText').textContent=SQL; $('#btnShowSql').textContent=show?'SQL-Schema ausblenden':'SQL-Schema anzeigen';
 });
-$('#btnCopySql').addEventListener('click',async ()=>{ try{ await navigator.clipboard.writeText(SQL); toast('SQL kopiert'); }catch{ toast('Kopieren nicht möglich'); } });
-$('#btnReload').addEventListener('click',async ()=>{ try{ await store.loadAll(); renderAll(); toast('Neu geladen'); }catch(err){ toast('Fehler: '+(err.message||err)); } });
-$('#btnWipe').addEventListener('click',async ()=>{ if(confirm('Wirklich ALLE Begegnungen löschen?')){ try{ await store.wipeMatches(); renderAll(); toast('Begegnungen gelöscht'); }catch(err){ toast('Fehler: '+(err.message||err)); } } });
+$('#btnCopySql').addEventListener('click',async ()=>{ try{ await navigator.clipboard.writeText(SQL); toast('SQL copied'); }catch{ toast('Copy not possible'); } });
+$('#btnReload').addEventListener('click',async ()=>{ try{ await store.loadAll(); renderAll(); toast('Reloaded'); }catch(err){ toast('Error: '+(err.message||err)); } });
+$('#btnWipe').addEventListener('click',async ()=>{ if(confirm('Really delete ALL matches of this event?')){ try{ await store.wipeMatches(); renderAll(); toast('Matches deleted'); }catch(err){ toast('Error: '+(err.message||err)); } } });
 
 /* ============================================================
    VIEW-ONLY (geteilter Link)
@@ -1325,8 +1838,8 @@ function enterViewOnly(){
 $('#btnLogin').addEventListener('click',doLogin);
 $('#loginPass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
 $('#loginEmail').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#loginPass').focus(); });
-$('#btnForgot').addEventListener('click',()=>{ $('#loginForm').style.display='none'; $('#resetForm').style.display='block'; $('#gateTitle').textContent='Passwort zurücksetzen'; const e=$('#resetEmail'); e.value=$('#loginEmail').value.trim(); e.focus(); });
-$('#btnBackLogin').addEventListener('click',()=>{ $('#resetForm').style.display='none'; $('#loginForm').style.display='block'; $('#gateTitle').textContent='Anmelden'; $('#resetMsg').textContent=''; });
+$('#btnForgot').addEventListener('click',()=>{ $('#loginForm').style.display='none'; $('#resetForm').style.display='block'; $('#gateTitle').textContent='Reset password'; const e=$('#resetEmail'); e.value=$('#loginEmail').value.trim(); e.focus(); });
+$('#btnBackLogin').addEventListener('click',()=>{ $('#resetForm').style.display='none'; $('#loginForm').style.display='block'; $('#gateTitle').textContent='Sign in'; $('#resetMsg').textContent=''; });
 $('#btnSendReset').addEventListener('click',doSendReset);
 $('#btnSetPass').addEventListener('click',doSetNewPass);
 $('#btnSignOut').addEventListener('click',doSignOut);
