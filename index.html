@@ -1,0 +1,1161 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schiedsrichter-Einteilung · Squash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eceef1; --surface:#ffffff; --ink:#14161a; --muted:#6a7180;
+    --line:#dfe3e8; --line-soft:#eef1f4;
+    --red:#c8102e; --red-soft:#fbe9ec; --red-ink:#8f0b20;
+    --go:#12855a; --go-soft:#e4f4ec; --go-ink:#0c5c3f;
+    --amber:#b45309; --amber-soft:#fbf0e0;
+    --radius:10px; --shadow:0 1px 2px rgba(20,22,26,.06),0 8px 24px rgba(20,22,26,.06);
+    --disp:'Archivo',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:var(--disp);margin:0;letter-spacing:-.01em}
+  .num{font-variant-numeric:tabular-nums}
+  button{font-family:inherit;font-size:inherit;cursor:pointer}
+  input,textarea,select{font-family:inherit;font-size:inherit}
+  a{color:var(--red-ink)}
+
+  /* ---- top bar ---- */
+  header.top{position:sticky;top:0;z-index:40;background:var(--surface);border-bottom:1px solid var(--line)}
+  header.top .inner{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:18px}
+  .brand{display:flex;align-items:center;gap:11px;margin-right:auto}
+  .brand .ball{width:16px;height:16px;border-radius:50%;background:var(--ink);position:relative;flex:0 0 auto}
+  .brand .ball::after{content:"";position:absolute;inset:0;margin:auto;width:5px;height:5px;border-radius:50%;background:var(--red)}
+  .brand b{font-family:var(--disp);font-weight:800;font-size:17px;letter-spacing:-.02em}
+  .brand span{color:var(--muted);font-size:12.5px;display:block;margin-top:-3px;letter-spacing:.02em}
+  nav.tabs{display:flex;gap:2px;background:var(--line-soft);padding:3px;border-radius:9px}
+  nav.tabs button{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:7px;font-weight:600}
+  nav.tabs button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .beacon{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .beacon .led{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .beacon.on .led{background:var(--go)} .beacon.local .led{background:var(--amber)} .beacon.off .led{background:var(--red)}
+
+  main{max-width:1240px;margin:0 auto;padding:22px 20px 80px}
+  .view{display:none} .view.active{display:block}
+
+  /* ---- schedule controls ---- */
+  .railwrap{margin-bottom:18px}
+  .rail-label{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 8px 2px}
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 15px;font-weight:600;color:var(--ink);display:inline-flex;align-items:center;gap:8px}
+  .pill small{color:var(--muted);font-weight:500}
+  .pill.active{background:var(--ink);border-color:var(--ink);color:#fff}
+  .pill.active small{color:#c9ccd2}
+  .pill.time{padding-left:12px}
+  .pill.time .dot{width:7px;height:7px;border-radius:50%;background:var(--red)}
+  .pill.time.active .dot{background:#fff}
+
+  .layout{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start}
+  @media(max-width:980px){.layout{grid-template-columns:1fr}}
+
+  .slot-head{display:flex;align-items:baseline;gap:12px;margin:4px 2px 14px}
+  .slot-head h2{font-size:30px;font-weight:800}
+  .slot-head .rule{flex:1;height:2px;background:var(--red);opacity:.85;border-radius:2px}
+  .slot-head .meta{color:var(--muted);font-size:13px}
+
+  .courtgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .match{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  .match .mhead{display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid var(--line-soft)}
+  .court{font-family:var(--disp);font-weight:800;font-size:15px;letter-spacing:.02em;color:#fff;background:var(--red);border-radius:7px;padding:4px 9px;line-height:1.2}
+  .court.alt{background:var(--ink)}
+  .mhead .draw{font-size:12px;color:var(--muted);line-height:1.25}
+  .mhead .draw b{display:block;color:var(--ink);font-weight:600;font-size:12.5px}
+  .teams{display:flex;align-items:center;gap:10px;padding:13px;font-family:var(--disp);font-weight:700;font-size:17px}
+  .teams .vs{font-family:var(--body);font-weight:600;color:var(--muted);font-size:12px}
+  .teams .seed{font-family:var(--body);font-weight:500;color:var(--muted);font-size:11px;vertical-align:super}
+  .teams .side{flex:1}
+  .teams .side.away{text-align:right}
+  .refs{padding:0 13px 13px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+  .refchip{display:inline-flex;align-items:center;gap:6px;background:var(--go-soft);color:var(--go-ink);border:1px solid #cbe8da;border-radius:999px;padding:4px 6px 4px 11px;font-weight:600;font-size:13px}
+  .refchip button{border:0;background:transparent;color:var(--go-ink);opacity:.6;padding:0 2px;font-size:15px;line-height:1}
+  .refchip button:hover{opacity:1}
+  .addref{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 12px;font-weight:600;font-size:13px}
+  .addref:hover{border-color:var(--red);color:var(--red-ink)}
+  .none-ref{color:var(--red);font-size:12.5px;font-weight:600}
+
+  /* assignment popover — fixed to viewport so it is never clipped by the card */
+  .picker{position:relative}
+  .menu{position:fixed;z-index:200;width:270px;max-height:320px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 30px rgba(20,22,26,.18);padding:6px}
+  .menu .mh{padding:6px 9px 8px;border-bottom:1px solid var(--line-soft);margin-bottom:4px}
+  .menu .mh input{padding:7px 9px;font-size:13px}
+  .opt{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer}
+  .opt:hover{background:var(--line-soft)}
+  .opt .box{width:16px;height:16px;border:1.5px solid var(--line);border-radius:4px;flex:0 0 auto;display:grid;place-items:center;color:#fff}
+  .opt.on .box{background:var(--go);border-color:var(--go)}
+  .opt .nm{flex:1;font-weight:500}
+  .opt .busy{font-size:11px;color:var(--red);font-weight:600}
+  .opt.empty{color:var(--muted);padding:10px 9px;cursor:default}
+
+  /* side panel */
+  .side{position:sticky;top:74px;display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card .ch{padding:12px 15px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between}
+  .card .ch h3{font-size:15px}
+  .card .cb{padding:13px 15px}
+  .tag-count{font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:#fff;background:var(--go);border-radius:999px;min-width:24px;text-align:center;padding:2px 8px}
+  .tag-count.zero{background:var(--muted)}
+  .tag-count.warn{background:var(--red)}
+  .avail{display:flex;flex-wrap:wrap;gap:7px}
+  .avail .t{background:var(--go-soft);color:var(--go-ink);border:1px solid #cbe8da;border-radius:999px;padding:4px 12px;font-weight:600;font-size:13px}
+  .empty-note{color:var(--muted);font-size:13px}
+  .conflict{display:flex;gap:9px;align-items:flex-start;background:var(--red-soft);border:1px solid #f2ccd3;border-radius:8px;padding:9px 11px;font-size:13px;color:var(--red-ink);margin-bottom:8px}
+  .conflict b{font-weight:700}
+  .wl{display:flex;flex-direction:column;gap:2px}
+  .wl .row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--line-soft)}
+  .wl .row:last-child{border-bottom:0}
+  .wl .nm{flex:1}
+  .wl .bar{height:6px;border-radius:3px;background:var(--red);opacity:.85}
+  .wl .n{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600;width:20px;text-align:right}
+
+  /* generic */
+  .btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:9px;padding:9px 16px;font-weight:600}
+  .btn:hover{opacity:.9}
+  .btn.ghost{background:transparent;color:var(--ink)}
+  .btn.red{background:var(--red);border-color:var(--red)}
+  .btn.sm{padding:6px 12px;border-radius:8px;font-size:13px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  label.fld{display:block;margin-bottom:12px}
+  label.fld span{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  input[type=text],input[type=password],input[type=url],textarea,select{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:var(--surface);color:var(--ink)}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--red);outline-offset:1px;border-color:transparent}
+  textarea{min-height:150px;resize:vertical;font-size:13px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+  .panel{max-width:820px}
+  .panel .card{margin-bottom:18px}
+  .row-inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .hint{color:var(--muted);font-size:12.5px;margin:6px 0 0}
+  .divider{height:1px;background:var(--line-soft);margin:14px 0}
+
+  /* referee admin list */
+  .reflist{display:flex;flex-direction:column}
+  .reflist .r{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+  .reflist .r:last-child{border-bottom:0}
+  .reflist .r .nm{font-weight:600}
+  .reflist .r .note{color:var(--muted);font-size:12.5px}
+  .reflist .r .sp{flex:1}
+  .icon{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:32px;height:32px;display:grid;place-items:center;color:var(--muted)}
+  .icon:hover{border-color:var(--red);color:var(--red-ink)}
+  .swatch{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px}
+  .swatch.on{background:var(--go-soft);color:var(--go-ink)} .swatch.off{background:var(--line-soft);color:var(--muted)}
+
+  /* import preview */
+  table.prev{width:100%;border-collapse:collapse;font-size:13px}
+  table.prev th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}
+  table.prev td{padding:4px 6px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+  table.prev input{padding:5px 7px;border-radius:6px;font-size:13px}
+  table.prev .cell-sm{width:74px}
+  .prevwrap{max-height:440px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+  .codebox{background:#0f1115;color:#e6e8ec;border-radius:10px;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55;white-space:pre;overflow:auto;max-height:340px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;box-shadow:var(--shadow);opacity:0;transition:.25s;z-index:60;font-weight:500}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+  .empty-state .big{font-family:var(--disp);font-weight:800;font-size:22px;color:var(--ink);margin-bottom:6px}
+  .file-drop{border:1.5px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);background:var(--line-soft)}
+  .file-drop:hover{border-color:var(--red)}
+
+  /* ---- board (Ansicht) ---- */
+  .board-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+  .board-bar .grow{flex:1;min-width:180px}
+  .board-bar select{max-width:280px}
+  .filter-note{background:var(--go-soft);border:1px solid #cbe8da;color:var(--go-ink);border-radius:999px;padding:5px 12px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:8px}
+  .filter-note button{border:0;background:transparent;color:var(--go-ink);opacity:.7;font-size:15px;line-height:1;padding:0}
+  .btimeblock{margin-bottom:22px}
+  .btime{display:flex;align-items:baseline;gap:12px;margin:0 2px 10px}
+  .btime h3{font-family:var(--disp);font-weight:800;font-size:24px}
+  .btime .rule{flex:1;height:2px;background:var(--red);opacity:.85;border-radius:2px}
+  .brow{display:grid;grid-template-columns:64px 1fr auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px;box-shadow:var(--shadow)}
+  .brow .bc{font-family:var(--disp);font-weight:800;color:#fff;background:var(--red);border-radius:7px;text-align:center;padding:5px 4px;font-size:14px}
+  .brow .bc.alt{background:var(--ink)}
+  .brow .bmatch b{font-family:var(--disp);font-weight:700;font-size:16px}
+  .brow .bmatch .sub{color:var(--muted);font-size:12.5px}
+  .brow .bref{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:340px}
+  .brow .bref .t{background:var(--go-soft);color:var(--go-ink);border:1px solid #cbe8da;border-radius:999px;padding:3px 11px;font-weight:600;font-size:12.5px}
+  .brow .bref .t.hi{background:var(--red);border-color:var(--red);color:#fff}
+  .brow .bref .none{color:var(--red);font-size:12.5px;font-weight:600}
+  @media(max-width:680px){.brow{grid-template-columns:52px 1fr;gap:10px}.brow .bref{grid-column:1/-1;justify-content:flex-start;max-width:none;margin-top:2px}}
+
+  /* ---- modal ---- */
+  .modal-bg{position:fixed;inset:0;background:rgba(16,18,22,.5);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--surface);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-width:560px;width:100%;padding:22px}
+  .modal h3{font-size:19px;margin-bottom:4px}
+  .modal .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+  .linkrow{display:flex;gap:8px;margin-bottom:12px}
+  .linkrow input{font-size:13px}
+  .modal .close{float:right;border:0;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
+
+  /* ---- print / PDF ---- */
+  @media print{
+    header.top,nav.tabs,.board-bar,.beacon,.modal-bg,.toast{display:none!important}
+    body{background:#fff}
+    main{max-width:none;padding:0}
+    #printArea{display:block!important}
+  }
+  #printArea{display:none}
+  .pr-head{border-bottom:2px solid var(--red);padding-bottom:8px;margin-bottom:14px}
+  .pr-head h1{font-family:var(--disp);font-weight:800;font-size:22px}
+  .pr-head .m{color:#555;font-size:12px;margin-top:2px}
+  .pr-time{font-family:var(--disp);font-weight:800;font-size:15px;margin:14px 0 4px;border-bottom:1px solid #ccc;padding-bottom:3px}
+  .pr-m{padding:6px 0;border-bottom:1px solid #eee;break-inside:avoid}
+  .pr-line{display:flex;gap:10px;font-size:13px}
+  .pr-line .c{font-weight:800;min-width:60px}
+  .pr-line .g{color:#666;margin-left:auto;font-size:11px}
+  .pr-refs{font-size:12.5px;margin:2px 0 0 70px;color:#111}
+  .pr-refs.empty{color:#c8102e}
+  .pr-refs .lb{color:#666}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="inner">
+    <div class="brand">
+      <div class="ball"></div>
+      <div><b>Referee Desk</b><span>Schiedsrichter-Einteilung</span></div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-view="plan" class="active">Einteilung</button>
+      <button data-view="board">Ansicht</button>
+      <button data-view="import">Import</button>
+      <button data-view="settings">Einstellungen</button>
+    </nav>
+    <div class="beacon" id="beacon"><span class="led"></span><span id="beaconTxt">…</span></div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ PLAN ============ -->
+  <section class="view active" id="view-plan">
+    <div id="planEmpty" class="empty-state" style="display:none">
+      <div class="big">Noch keine Begegnungen</div>
+      <div>Importiere den Spielplan aus der Tournamentsoftware im Reiter <b>Import</b>.</div>
+    </div>
+
+    <div id="planBody" style="display:none">
+      <div class="railwrap" id="dateRail">
+        <p class="rail-label">Spieltag</p>
+        <div class="pills" id="datePills"></div>
+      </div>
+      <div class="railwrap">
+        <p class="rail-label">Anspielzeit</p>
+        <div class="pills" id="timePills"></div>
+      </div>
+
+      <div class="layout">
+        <div>
+          <div class="slot-head">
+            <h2 class="num" id="slotTime">–</h2>
+            <div class="rule"></div>
+            <div class="meta" id="slotMeta"></div>
+          </div>
+          <div class="courtgrid" id="courtGrid"></div>
+        </div>
+
+        <aside class="side">
+          <div class="card">
+            <div class="ch"><h3>Pause · verfügbar</h3><span class="tag-count" id="availCount">0</span></div>
+            <div class="cb">
+              <div id="conflicts"></div>
+              <div class="avail" id="availList"></div>
+              <p class="empty-note" id="availEmpty" style="display:none">Alle aktiven Schiedsrichter sind zu dieser Zeit eingeteilt.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><h3>Einsätze am Spieltag</h3></div>
+            <div class="cb"><div class="wl" id="workload"></div></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BOARD (Ansicht) ============ -->
+  <section class="view" id="view-board">
+    <div id="boardEmpty" class="empty-state" style="display:none">
+      <div class="big">Noch keine Begegnungen</div>
+      <div>Sobald der Spielplan importiert ist, erscheint hier die Übersicht.</div>
+    </div>
+    <div id="boardBody" style="display:none">
+      <div class="board-bar">
+        <div><p class="rail-label" style="margin-bottom:6px">Spieltag</p>
+          <div class="pills" id="boardDatePills"></div>
+        </div>
+        <div class="grow"><p class="rail-label" style="margin-bottom:6px">Nur meine Begegnungen</p>
+          <select id="refFilter"><option value="">Alle Schiedsrichter</option></select>
+        </div>
+        <div style="align-self:flex-end;display:flex;gap:8px">
+          <button class="btn sm" id="btnPrint">Als PDF / Drucken</button>
+          <button class="btn ghost sm" id="btnShare">Link teilen</button>
+          <button class="btn ghost sm" id="btnRefreshBoard">Aktualisieren</button>
+        </div>
+      </div>
+      <div id="filterActive"></div>
+      <div id="boardList"></div>
+    </div>
+  </section>
+
+  <!-- ============ IMPORT ============ -->
+  <section class="view" id="view-import">
+    <div class="panel">
+      <div class="card">
+        <div class="ch"><h3>Spielplan importieren</h3></div>
+        <div class="cb">
+          <p class="hint" style="margin-top:0">Datei aus der Tournamentsoftware hochladen (<b>.pdf</b> oder <b>.txt</b>) oder den Text direkt einfügen. Danach prüfst du die erkannten Begegnungen und importierst.</p>
+          <div class="file-drop" id="fileDrop" style="margin:12px 0">
+            <input type="file" id="fileInput" accept=".pdf,.txt,text/plain,application/pdf" style="display:none">
+            <div><b>Datei wählen</b> · PDF oder TXT — oder Text unten einfügen</div>
+          </div>
+          <label class="fld"><span>Text aus dem Export</span>
+            <textarea id="importText" placeholder="Inhalt der Exportdatei hier einfügen…"></textarea>
+          </label>
+          <div class="row-inline">
+            <button class="btn" id="btnParse">Analysieren</button>
+            <span class="hint" id="parseInfo"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="previewCard" style="display:none">
+        <div class="ch"><h3>Vorschau &amp; Prüfung</h3><span class="hint" id="prevCount"></span></div>
+        <div class="cb">
+          <div class="grid2">
+            <label class="fld"><span>Spieltag (Datum)</span><input type="text" id="impDate" placeholder="tt.mm.jjjj"></label>
+            <label class="fld" style="display:flex;align-items:flex-end;padding-bottom:12px">
+              <span style="margin:0"><input type="checkbox" id="impReplace" checked style="width:auto;margin-right:7px;vertical-align:-1px">Vorhandene Begegnungen dieses Datums vorher löschen</span>
+            </label>
+          </div>
+          <p class="hint" style="margin-top:0">Court, Heim &amp; Gast kannst du hier noch korrigieren, falls die Erkennung mal danebenliegt.</p>
+          <div class="prevwrap" style="margin:10px 0">
+            <table class="prev">
+              <thead><tr><th>Zeit</th><th>Court</th><th>Halle</th><th>Wettbewerb</th><th>Heim</th><th></th><th>Gast</th></tr></thead>
+              <tbody id="prevBody"></tbody>
+            </table>
+          </div>
+          <div class="row-inline">
+            <button class="btn red" id="btnImport">Importieren</button>
+            <button class="btn ghost" id="btnCancelImport">Verwerfen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="view" id="view-settings">
+    <div class="panel">
+      <div class="card">
+        <div class="ch"><h3>Schiedsrichter</h3><span class="hint" id="refTotal"></span></div>
+        <div class="cb">
+          <div class="row-inline" style="margin-bottom:8px">
+            <input type="text" id="refName" placeholder="Name" style="flex:2;min-width:160px">
+            <input type="text" id="refNote" placeholder="Notiz / Verein (optional)" style="flex:2;min-width:160px">
+            <button class="btn sm" id="btnAddRef">Hinzufügen</button>
+          </div>
+          <div class="reflist" id="refList"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><h3>Datenspeicher</h3><span class="hint" id="storeMode"></span></div>
+        <div class="cb">
+          <label class="fld"><span>Speicherort</span>
+            <select id="backendSel">
+              <option value="local">Lokal (nur dieser Browser)</option>
+              <option value="supabase">Supabase (geteilt, empfohlen für das Turnier)</option>
+            </select>
+          </label>
+          <div id="supaFields">
+            <div class="grid2">
+              <label class="fld"><span>Supabase Project URL</span><input type="url" id="supaUrl" placeholder="https://xxxx.supabase.co"></label>
+              <label class="fld"><span>Anon / Public Key</span><input type="password" id="supaKey" placeholder="eyJhbGciOi…"></label>
+            </div>
+            <p class="hint" style="margin-top:0">Der Anon-Key ist für den Client gedacht und öffentlich unkritisch, wird aber lokal in diesem Browser gespeichert – nicht im GitHub-Repo. Schütze die Tabellen zusätzlich über Supabase-RLS-Policies (siehe Schema).</p>
+          </div>
+          <div class="row-inline" style="margin-top:6px">
+            <button class="btn" id="btnConnect">Speichern &amp; verbinden</button>
+            <button class="btn ghost sm" id="btnShowSql">SQL-Schema anzeigen</button>
+            <span class="beacon" id="beacon2"><span class="led"></span><span id="beacon2Txt"></span></span>
+          </div>
+          <div id="sqlBox" style="display:none;margin-top:12px">
+            <div class="codebox" id="sqlText"></div>
+            <div class="row-inline" style="margin-top:8px"><button class="btn ghost sm" id="btnCopySql">Kopieren</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><h3>Wartung</h3></div>
+        <div class="cb row-inline">
+          <button class="btn ghost sm" id="btnReload">Daten neu laden</button>
+          <button class="btn ghost sm" id="btnWipe" style="border-color:var(--red);color:var(--red-ink)">Alle Begegnungen löschen</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="printArea"></div>
+
+<div class="modal-bg" id="shareModal">
+  <div class="modal">
+    <button class="close" id="shareClose">×</button>
+    <h3>Link teilen</h3>
+    <p class="sub">Nur-Lese-Ansicht — Editieren ist über diesen Link nicht möglich. Setzt einen verbundenen Supabase-Speicher voraus (siehe Hinweis unten).</p>
+    <label class="fld"><span>Allgemeiner Link (alle sehen die Einteilung)</span>
+      <div class="linkrow"><input type="text" id="shareGeneral" readonly><button class="btn sm" data-copy="shareGeneral">Kopieren</button></div>
+    </label>
+    <label class="fld"><span>Persönlicher Link für einen Schiedsrichter (nur seine Begegnungen)</span>
+      <select id="sharePick" style="margin-bottom:8px"><option value="">Schiedsrichter wählen…</option></select>
+      <div class="linkrow"><input type="text" id="sharePersonal" readonly placeholder="Erst Schiedsrichter wählen"><button class="btn sm" data-copy="sharePersonal">Kopieren</button></div>
+    </label>
+    <p class="hint" id="shareWarn"></p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* ============================================================
+   Referee Desk — Schiedsrichter-Einteilung (Single File)
+   ============================================================ */
+/* ------------------------------------------------------------
+   EINGEBETTETER SUPABASE-ZUGANG (für den öffentlichen Teilen-Link)
+   Zum Veröffentlichen hier URL + Anon-Key eintragen und committen.
+   Der Anon-Key ist für Client-Nutzung gedacht (Schutz über RLS-Policies).
+   Bleibt das leer, nutzt die App den in den Einstellungen gespeicherten
+   Zugang bzw. den lokalen Speicher.
+   ------------------------------------------------------------ */
+const EMBEDDED_SUPABASE = { url:'', key:'' };
+
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const uid = ()=> (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+Math.random().toString(16).slice(2));
+const esc = s => (s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const LS = {
+  cfg:'rd_config', refs:'rd_referees', matches:'rd_matches', asg:'rd_assignments'
+};
+
+const params = new URLSearchParams(location.search);
+const VIEW_ONLY = params.get('view')==='1';           // reiner Ansichtsmodus (geteilter Link)
+const URL_REF   = params.get('ref') ? decodeURIComponent(params.get('ref')) : '';
+
+const state = {
+  backend:'local', supa:null, connected:false,
+  referees:[], matches:[], assignments:{},   // matchId -> [refId...]
+  selDate:null, selTime:null, parsed:[],
+  boardDate:null, refFilter:URL_REF
+};
+
+/* ---------------- toast ---------------- */
+let toastT;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+
+/* ============================================================
+   STORAGE LAYER — Supabase when connected, else localStorage
+   ============================================================ */
+const store = {
+  async loadAll(){
+    if(state.backend==='supabase' && state.supa){
+      const [r,m,a] = await Promise.all([
+        state.supa.from('referees').select('*').order('name'),
+        state.supa.from('matches').select('*').order('match_date').order('sort_order'),
+        state.supa.from('assignments').select('*')
+      ]);
+      if(r.error||m.error||a.error) throw (r.error||m.error||a.error);
+      state.referees = r.data||[];
+      state.matches  = m.data||[];
+      const map={}; (a.data||[]).forEach(x=>{ (map[x.match_id]=map[x.match_id]||[]).push(x.referee_id); });
+      state.assignments = map;
+    } else {
+      state.referees   = JSON.parse(localStorage.getItem(LS.refs)||'[]');
+      state.matches    = JSON.parse(localStorage.getItem(LS.matches)||'[]');
+      state.assignments= JSON.parse(localStorage.getItem(LS.asg)||'{}');
+    }
+  },
+  _saveLocal(){
+    localStorage.setItem(LS.refs,JSON.stringify(state.referees));
+    localStorage.setItem(LS.matches,JSON.stringify(state.matches));
+    localStorage.setItem(LS.asg,JSON.stringify(state.assignments));
+  },
+  async addReferee(ref){
+    ref = {name:ref.name, note:ref.note||'', active:true};
+    if(state.backend==='supabase' && state.supa){
+      const {data,error}=await state.supa.from('referees').insert(ref).select().single();
+      if(error) throw error; state.referees.push(data);
+    } else { const row={id:uid(),...ref}; state.referees.push(row); this._saveLocal(); }
+    state.referees.sort((a,b)=>a.name.localeCompare(b.name,'de'));
+  },
+  async updateReferee(id,patch){
+    if(state.backend==='supabase' && state.supa){
+      const {error}=await state.supa.from('referees').update(patch).eq('id',id); if(error) throw error;
+    }
+    const r=state.referees.find(x=>x.id===id); if(r) Object.assign(r,patch);
+    if(state.backend!=='supabase') this._saveLocal();
+    state.referees.sort((a,b)=>a.name.localeCompare(b.name,'de'));
+  },
+  async deleteReferee(id){
+    if(state.backend==='supabase' && state.supa){
+      const {error}=await state.supa.from('referees').delete().eq('id',id); if(error) throw error;
+    }
+    state.referees = state.referees.filter(x=>x.id!==id);
+    for(const mid in state.assignments) state.assignments[mid]=state.assignments[mid].filter(x=>x!==id);
+    if(state.backend!=='supabase') this._saveLocal();
+  },
+  async clearMatchesForDate(date){
+    const ids = state.matches.filter(m=>m.match_date===date).map(m=>m.id);
+    if(state.backend==='supabase' && state.supa){
+      const {error}=await state.supa.from('matches').delete().eq('match_date',date); if(error) throw error;
+    }
+    state.matches = state.matches.filter(m=>m.match_date!==date);
+    ids.forEach(id=>delete state.assignments[id]);
+    if(state.backend!=='supabase') this._saveLocal();
+  },
+  async wipeMatches(){
+    if(state.backend==='supabase' && state.supa){
+      const {error}=await state.supa.from('matches').delete().neq('id','00000000-0000-0000-0000-000000000000'); if(error) throw error;
+    }
+    state.matches=[]; state.assignments={};
+    if(state.backend!=='supabase') this._saveLocal();
+  },
+  async addMatches(rows){
+    if(state.backend==='supabase' && state.supa){
+      const {data,error}=await state.supa.from('matches').insert(rows).select(); if(error) throw error;
+      state.matches.push(...data);
+    } else {
+      rows.forEach(r=>state.matches.push({id:uid(),...r})); this._saveLocal();
+    }
+  },
+  async assign(matchId,refId){
+    const arr = state.assignments[matchId]=state.assignments[matchId]||[];
+    if(arr.includes(refId)) return;
+    if(state.backend==='supabase' && state.supa){
+      const {error}=await state.supa.from('assignments').insert({match_id:matchId,referee_id:refId}); if(error) throw error;
+    }
+    arr.push(refId);
+    if(state.backend!=='supabase') this._saveLocal();
+  },
+  async unassign(matchId,refId){
+    if(state.backend==='supabase' && state.supa){
+      const {error}=await state.supa.from('assignments').delete().eq('match_id',matchId).eq('referee_id',refId); if(error) throw error;
+    }
+    state.assignments[matchId]=(state.assignments[matchId]||[]).filter(x=>x!==refId);
+    if(state.backend!=='supabase') this._saveLocal();
+  }
+};
+
+/* ============================================================
+   PARSER — tournamentsoftware "Squash League Planner" export
+   ============================================================ */
+function lcTokenPrefix(arrs){
+  if(!arrs.length) return [];
+  let p=arrs[0].slice();
+  for(let i=1;i<arrs.length;i++){ const a=arrs[i]; let k=0;
+    while(k<p.length&&k<a.length&&p[k].toLowerCase()===a[k].toLowerCase()) k++; p=p.slice(0,k); if(!p.length) break; }
+  return p;
+}
+function parseSchedule(text){
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const rx=/^(.+?)\s+-\s+(.+?)\s+-\s+(.+?)\s*\[(\d+)\]\s*-\s*(.+?)\s*\[(\d+)\]\s*$/;
+  let date=null,time=null,order=0; const raw=[];
+  for(const line of lines){
+    let m;
+    if((m=line.match(/^Matches of\b.*?(\d{1,2}\.\d{1,2}\.\d{4})/))){ date=m[1]; continue; }
+    if(/^\d{1,2}:\d{2}$/.test(line)){ time=line; continue; }
+    if((m=line.match(rx))){
+      const seg2=m[2].trim(); const cm=seg2.match(/^(.*?)\s*(\S+)$/); let grp='',court='';
+      if(cm && /^[A-Za-z]{1,6}\d+(&[A-Za-z]*\d+)*$/.test(cm[2])){ grp=cm[1].trim(); court=cm[2]; }
+      else { grp=seg2; court=''; }
+      raw.push({ match_date:date, time, event:m[1].trim(), grp, court,
+        _vh:m[3].trim(), home_seed:+m[4], away_team:m[5].trim(), away_seed:+m[6], sort_order:order++ });
+    }
+  }
+  // venue detection per court-prefix
+  const groups={};
+  raw.forEach(r=>{ const p=(r.court.match(/^[A-Za-z]+/)||['?'])[0]; (groups[p]=groups[p]||[]).push(r); });
+  for(const p in groups){
+    const arr=groups[p]; const toks=arr.map(r=>r._vh.split(/\s+/)); let v=lcTokenPrefix(toks);
+    if(arr.length===1 && v.length===toks[0].length) v=v.slice(0,Math.max(0,v.length-1));
+    const venue=v.join(' ');
+    arr.forEach(r=>{ const t=r._vh.split(/\s+/); r.venue=venue; r.home_team=t.slice(v.length).join(' ')||r._vh; delete r._vh; });
+  }
+  return raw;
+}
+
+/* ============================================================
+   PLAN VIEW
+   ============================================================ */
+function dates(){ return [...new Set(state.matches.map(m=>m.match_date||'—'))]; }
+function timesFor(date){
+  const t=[...new Set(state.matches.filter(m=>(m.match_date||'—')===date).map(m=>m.time))];
+  return t.sort((a,b)=>(a||'').localeCompare(b||''));
+}
+function matchesAt(date,time){
+  return state.matches.filter(m=>(m.match_date||'—')===date && m.time===time)
+    .sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
+}
+function activeRefs(){ return state.referees.filter(r=>r.active!==false); }
+function refName(id){ const r=state.referees.find(x=>x.id===id); return r?r.name:'—'; }
+// which matches (in same date+time) a referee is assigned to
+function busyMap(date,time){
+  const map={}; matchesAt(date,time).forEach(m=>{ (state.assignments[m.id]||[]).forEach(rid=>{ (map[rid]=map[rid]||[]).push(m); }); });
+  return map;
+}
+
+function renderPlan(){
+  const hasData = state.matches.length>0;
+  $('#planEmpty').style.display = hasData?'none':'block';
+  $('#planBody').style.display  = hasData?'block':'none';
+  if(!hasData) return;
+
+  const ds=dates();
+  if(!state.selDate || !ds.includes(state.selDate)) state.selDate=ds[0];
+  const ts=timesFor(state.selDate);
+  if(!state.selTime || !ts.includes(state.selTime)) state.selTime=ts[0];
+
+  // date pills
+  $('#dateRail').style.display = ds.length>1 ? 'block':'none';
+  $('#datePills').innerHTML = ds.map(d=>{
+    const n=state.matches.filter(m=>(m.match_date||'—')===d).length;
+    return `<button class="pill${d===state.selDate?' active':''}" data-date="${esc(d)}">${esc(d)} <small class="num">${n}</small></button>`;
+  }).join('');
+
+  // time pills
+  $('#timePills').innerHTML = ts.map(t=>{
+    const n=matchesAt(state.selDate,t).length;
+    return `<button class="pill time${t===state.selTime?' active':''}" data-time="${esc(t)}"><span class="dot"></span><span class="num">${esc(t)}</span> <small class="num">${n}</small></button>`;
+  }).join('');
+
+  const ms = matchesAt(state.selDate,state.selTime);
+  $('#slotTime').textContent = state.selTime||'–';
+  $('#slotMeta').textContent = `${ms.length} Begegnung${ms.length===1?'':'en'} · ${state.selDate}`;
+
+  // match cards
+  $('#courtGrid').innerHTML = ms.map(m=>matchCard(m)).join('');
+
+  renderSidePanel(ms);
+}
+
+function matchCard(m){
+  const asg = state.assignments[m.id]||[];
+  const alt = /^SBC/i.test(m.court);
+  const chips = asg.map(rid=>`<span class="refchip">${esc(refName(rid))}<button data-unassign="${m.id}|${rid}" title="Entfernen">×</button></span>`).join('');
+  const noneWarn = asg.length===0 ? `<span class="none-ref">kein Schiedsrichter</span>` : '';
+  return `<div class="match">
+    <div class="mhead">
+      <span class="court${alt?' alt':''}">${esc(m.court||'—')}</span>
+      <div class="draw"><b>${esc(m.event||'')}</b>${esc([m.grp,m.venue].filter(Boolean).join(' · '))}</div>
+    </div>
+    <div class="teams">
+      <span class="side">${esc(m.home_team)}${m.home_seed?`<span class="seed">[${m.home_seed}]</span>`:''}</span>
+      <span class="vs">vs</span>
+      <span class="side away">${esc(m.away_team)}${m.away_seed?`<span class="seed">[${m.away_seed}]</span>`:''}</span>
+    </div>
+    <div class="refs">
+      ${chips}${noneWarn}
+      <div class="picker">
+        <button class="addref" data-pick="${m.id}">+ zuteilen</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+let pickerMatchId=null;
+function pickerBody(matchId, query=''){
+  const asg = new Set(state.assignments[matchId]||[]);
+  const busy = busyMap(state.selDate,state.selTime);
+  const q=query.trim().toLowerCase();
+  let refs = activeRefs();
+  if(!refs.length) return `<div class="opt empty">Noch keine Schiedsrichter erfasst.<br>Lege sie unter <b>Einstellungen</b> an.</div>`;
+  if(q) refs = refs.filter(r=>r.name.toLowerCase().includes(q));
+  if(!refs.length) return `<div class="opt empty">Kein Treffer für „${esc(query)}“.</div>`;
+  return refs.map(r=>{
+    const on=asg.has(r.id);
+    const other=(busy[r.id]||[]).filter(x=>x.id!==matchId);
+    const busyNote = other.length ? `<span class="busy">belegt ${esc(other.map(x=>x.court).join(', '))}</span>` : '';
+    return `<div class="opt${on?' on':''}" data-toggle="${matchId}|${r.id}">
+      <span class="box">${on?'✓':''}</span><span class="nm">${esc(r.name)}</span>${busyNote}</div>`;
+  }).join('');
+}
+async function toggleAssign(mid,rid){
+  const on=(state.assignments[mid]||[]).includes(rid);
+  const q = $('#__pickerSearch') ? $('#__pickerSearch').value : '';
+  try{ on? await store.unassign(mid,rid) : await store.assign(mid,rid); }
+  catch(err){ toast('Fehler: '+(err.message||err)); return; }
+  renderPlan();
+  const btn=$(`[data-pick="${mid}"]`);
+  if(btn){ openPicker(mid,btn); const s=$('#__pickerSearch'); if(s&&q){ s.value=q; $('#__pickerList').innerHTML=pickerBody(mid,q); } }
+}
+function openPicker(matchId, anchorBtn){
+  closePicker();
+  pickerMatchId=matchId;
+  const menu=document.createElement('div'); menu.className='menu'; menu.id='__menu';
+  menu.innerHTML = `<div class="mh"><input type="text" id="__pickerSearch" placeholder="Schiedsrichter suchen…" autocomplete="off"></div>
+    <div id="__pickerList">${pickerBody(matchId)}</div>`;
+  document.body.appendChild(menu);
+  // menu lives on <body>, so it handles its own clicks (delegation from #view-plan can't reach it)
+  menu.addEventListener('click',e=>{
+    const tg=e.target.closest('[data-toggle]'); if(!tg) return;
+    e.stopPropagation();
+    const [mid,rid]=tg.dataset.toggle.split('|');
+    toggleAssign(mid,rid);
+  });
+  // position fixed relative to the button, kept inside the viewport
+  const r=anchorBtn.getBoundingClientRect();
+  const mw=menu.offsetWidth, mh=menu.offsetHeight;
+  let left=r.left, top=r.bottom+6;
+  if(left+mw > window.innerWidth-8) left=Math.max(8, window.innerWidth-mw-8);
+  if(top+mh > window.innerHeight-8) top=Math.max(8, r.top-mh-6);
+  menu.style.left=left+'px'; menu.style.top=top+'px';
+  const search=$('#__pickerSearch');
+  search.addEventListener('input',()=>{ $('#__pickerList').innerHTML=pickerBody(matchId, search.value); });
+  search.focus();
+  setTimeout(()=>{ document.addEventListener('click',outsideClose); window.addEventListener('resize',closePicker); window.addEventListener('scroll',closePicker,true); },0);
+}
+function closePicker(){ const m=$('#__menu'); if(m) m.remove(); pickerMatchId=null;
+  document.removeEventListener('click',outsideClose); window.removeEventListener('resize',closePicker); window.removeEventListener('scroll',closePicker,true); }
+function outsideClose(e){ if(!e.target.closest('#__menu') && !e.target.closest('[data-pick]')) closePicker(); }
+
+function renderSidePanel(ms){
+  const refs=activeRefs();
+  const busy=busyMap(state.selDate,state.selTime);
+  // available = active referees with no assignment at this time
+  const avail = refs.filter(r=>!(busy[r.id]&&busy[r.id].length));
+  const ac=$('#availCount'); ac.textContent=avail.length;
+  ac.className='tag-count'+(avail.length===0?' zero':'');
+  $('#availList').innerHTML = avail.map(r=>`<span class="t">${esc(r.name)}</span>`).join('');
+  $('#availEmpty').style.display = (refs.length>0 && avail.length===0)?'block':'none';
+  if(refs.length===0) $('#availList').innerHTML=`<span class="empty-note">Keine Schiedsrichter erfasst.</span>`;
+
+  // conflicts = referee on 2+ matches at this time
+  const conf = refs.map(r=>({r,ms:(busy[r.id]||[])})).filter(x=>x.ms.length>1);
+  $('#conflicts').innerHTML = conf.map(x=>`<div class="conflict">⚠ <div><b>${esc(x.r.name)}</b> ist doppelt eingeteilt: ${esc(x.ms.map(m=>m.court).join(', '))}</div></div>`).join('');
+
+  // workload for the whole day
+  const dayMatches = state.matches.filter(m=>(m.match_date||'—')===state.selDate);
+  const counts={}; refs.forEach(r=>counts[r.id]=0);
+  dayMatches.forEach(m=>(state.assignments[m.id]||[]).forEach(rid=>{ if(rid in counts) counts[rid]++; }));
+  const max=Math.max(1,...Object.values(counts));
+  const rows=refs.slice().sort((a,b)=>counts[b.id]-counts[a.id]);
+  $('#workload').innerHTML = rows.length? rows.map(r=>{
+    const c=counts[r.id]; const w=Math.round((c/max)*100);
+    return `<div class="row"><span class="nm">${esc(r.name)}</span><span class="bar" style="width:${Math.max(c?8:0,w*0.6)}px"></span><span class="n num">${c}</span></div>`;
+  }).join('') : `<span class="empty-note">Keine Schiedsrichter erfasst.</span>`;
+}
+
+/* ============================================================
+   BOARD (Ansicht) — read-only, teilbar, mit Filter & PDF
+   ============================================================ */
+function refIdByName(name){ const r=state.referees.find(x=>x.name.toLowerCase()===(name||'').toLowerCase()); return r?r.id:null; }
+
+function renderBoard(){
+  const hasData=state.matches.length>0;
+  $('#boardEmpty').style.display=hasData?'none':'block';
+  $('#boardBody').style.display=hasData?'block':'none';
+  if(!hasData) return;
+
+  const ds=dates();
+  if(!state.boardDate || !ds.includes(state.boardDate)) state.boardDate=ds[0];
+
+  // date pills
+  $('#boardDatePills').style.display = ds.length>1?'flex':'none';
+  $('#boardDatePills').innerHTML = ds.map(d=>{
+    const n=state.matches.filter(m=>(m.match_date||'—')===d).length;
+    return `<button class="pill${d===state.boardDate?' active':''}" data-bdate="${esc(d)}">${esc(d)} <small class="num">${n}</small></button>`;
+  }).join('');
+
+  // referee filter dropdown
+  const sel=$('#refFilter');
+  const cur=state.refFilter||'';
+  sel.innerHTML = `<option value="">Alle Schiedsrichter</option>` +
+    state.referees.slice().sort((a,b)=>a.name.localeCompare(b.name,'de'))
+      .map(r=>`<option value="${esc(r.name)}"${r.name===cur?' selected':''}>${esc(r.name)}</option>`).join('');
+  sel.value=cur;
+
+  // active-filter chip
+  $('#filterActive').innerHTML = cur
+    ? `<div style="margin-bottom:14px"><span class="filter-note">Gefiltert: ${esc(cur)} <button id="clearFilter" title="Filter aufheben">×</button></span></div>` : '';
+
+  const filterId = cur ? refIdByName(cur) : null;
+  const ts=timesFor(state.boardDate);
+  let html='';
+  ts.forEach(t=>{
+    let ms=matchesAt(state.boardDate,t);
+    if(filterId!=null) ms=ms.filter(m=>(state.assignments[m.id]||[]).includes(filterId));
+    if(!ms.length) return;
+    html += `<div class="btimeblock"><div class="btime"><h3 class="num">${esc(t)}</h3><div class="rule"></div></div>`;
+    ms.forEach(m=>{
+      const asg=state.assignments[m.id]||[];
+      const alt=/^SBC/i.test(m.court);
+      const refs = asg.length
+        ? asg.map(rid=>{ const nm=refName(rid); const hi=cur && nm.toLowerCase()===cur.toLowerCase(); return `<span class="t${hi?' hi':''}">${esc(nm)}</span>`; }).join('')
+        : `<span class="none">kein Schiedsrichter</span>`;
+      html += `<div class="brow">
+        <span class="bc${alt?' alt':''}">${esc(m.court||'—')}</span>
+        <div class="bmatch"><b>${esc(m.home_team)} <span style="color:var(--muted);font-weight:600">vs</span> ${esc(m.away_team)}</b>
+          <div class="sub">${esc([m.event,m.grp,m.venue].filter(Boolean).join(' · '))}</div></div>
+        <div class="bref">${refs}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  $('#boardList').innerHTML = html || `<p class="empty-note">Keine Begegnungen${cur?` für ${esc(cur)}`:''} an diesem Spieltag.</p>`;
+}
+
+/* ---- PDF / print document ---- */
+function buildPrintDoc(){
+  const date=state.boardDate; const cur=state.refFilter||'';
+  const filterId = cur ? refIdByName(cur) : null;
+  const ts=timesFor(date);
+  let body='';
+  ts.forEach(t=>{
+    let ms=matchesAt(date,t);
+    if(filterId!=null) ms=ms.filter(m=>(state.assignments[m.id]||[]).includes(filterId));
+    if(!ms.length) return;
+    body += `<div class="pr-time">${esc(t)} Uhr</div>`;
+    ms.forEach(m=>{
+      const asg=(state.assignments[m.id]||[]).map(refName);
+      const refsLine = asg.length
+        ? `<div class="pr-refs"><span class="lb">SR:</span> ${esc(asg.join(', '))}</div>`
+        : `<div class="pr-refs empty"><span class="lb">SR:</span> — nicht eingeteilt</div>`;
+      body += `<div class="pr-m">
+        <div class="pr-line"><span class="c">${esc(m.court||'')}</span>
+          <span>${esc(m.home_team)} vs ${esc(m.away_team)}</span>
+          <span class="g">${esc([m.event,m.grp,m.venue].filter(Boolean).join(' · '))}</span></div>
+        ${refsLine}</div>`;
+    });
+  });
+  const sub = cur ? `Schiedsrichter-Einteilung — nur ${esc(cur)}` : 'Schiedsrichter-Einteilung';
+  $('#printArea').innerHTML = `<div class="pr-head"><h1>${sub}</h1>
+    <div class="m">Spieltag ${esc(date)} · erstellt ${new Date().toLocaleString('de-DE')}</div></div>${body||'<p>Keine Begegnungen.</p>'}`;
+}
+function doPrint(){ buildPrintDoc(); window.print(); }
+
+/* ---- share links ---- */
+function baseUrl(){ return location.origin + location.pathname; }
+function shareLink(refName){
+  let u = baseUrl()+'?view=1';
+  if(refName) u += '&ref='+encodeURIComponent(refName);
+  return u;
+}
+function openShare(){
+  const embedded = EMBEDDED_SUPABASE.url && EMBEDDED_SUPABASE.key;
+  $('#shareGeneral').value = shareLink('');
+  const pick=$('#sharePick');
+  pick.innerHTML = `<option value="">Schiedsrichter wählen…</option>` +
+    state.referees.slice().sort((a,b)=>a.name.localeCompare(b.name,'de')).map(r=>`<option value="${esc(r.name)}">${esc(r.name)}</option>`).join('');
+  $('#sharePersonal').value='';
+  $('#shareWarn').innerHTML = embedded
+    ? 'Der geteilte Link liest live aus Supabase — jede Änderung ist sofort für alle sichtbar.'
+    : '⚠ Damit der Link auf anderen Geräten Daten anzeigt, muss oben im Code <b>EMBEDDED_SUPABASE</b> mit URL + Anon-Key gefüllt und committet sein. Ohne das sieht ein fremder Browser keine Daten.';
+  $('#shareModal').classList.add('show');
+}
+
+/* ============================================================
+   IMPORT VIEW
+   ============================================================ */
+async function extractPdf(file){
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  let out='';
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p); const tc=await page.getTextContent();
+    // rebuild lines by Y position
+    const rows={};
+    tc.items.forEach(it=>{ const y=Math.round(it.transform[5]); (rows[y]=rows[y]||[]).push(it); });
+    Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y=>{
+      const line=rows[y].sort((a,b)=>a.transform[4]-b.transform[4]).map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+      if(line) out+=line+'\n';
+    });
+  }
+  return out;
+}
+function renderPreview(){
+  const rows=state.parsed;
+  $('#previewCard').style.display = rows.length?'block':'none';
+  if(!rows.length) return;
+  $('#prevCount').textContent = `${rows.length} Begegnungen`;
+  const d = rows.find(r=>r.match_date)?.match_date || '';
+  $('#impDate').value = d;
+  $('#prevBody').innerHTML = rows.map((r,i)=>`<tr>
+    <td class="num">${esc(r.time||'')}</td>
+    <td class="cell-sm"><input type="text" data-f="court" data-i="${i}" value="${esc(r.court||'')}"></td>
+    <td>${esc(r.venue||'')}</td>
+    <td>${esc([r.event,r.grp].filter(Boolean).join(' · '))}</td>
+    <td><input type="text" data-f="home_team" data-i="${i}" value="${esc(r.home_team||'')}"></td>
+    <td style="color:var(--muted)">vs</td>
+    <td><input type="text" data-f="away_team" data-i="${i}" value="${esc(r.away_team||'')}"></td>
+  </tr>`).join('');
+}
+
+/* ============================================================
+   SETTINGS VIEW
+   ============================================================ */
+function renderRefs(){
+  $('#refTotal').textContent = state.referees.length? `${state.referees.length} erfasst` : '';
+  $('#refList').innerHTML = state.referees.length ? state.referees.map(r=>`
+    <div class="r">
+      <div>
+        <div class="nm">${esc(r.name)}</div>
+        ${r.note?`<div class="note">${esc(r.note)}</div>`:''}
+      </div>
+      <span class="sp"></span>
+      <button class="swatch ${r.active!==false?'on':'off'}" data-toggle-active="${r.id}">${r.active!==false?'aktiv':'inaktiv'}</button>
+      <button class="icon" data-del-ref="${r.id}" title="Löschen">🗑</button>
+    </div>`).join('') : `<p class="empty-note">Noch keine Schiedsrichter. Oben hinzufügen.</p>`;
+}
+
+const SQL = `-- Referee Desk · Supabase Schema
+create extension if not exists "pgcrypto";
+
+create table if not exists referees (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  note       text default '',
+  active     boolean default true,
+  created_at timestamptz default now()
+);
+
+create table if not exists matches (
+  id         uuid primary key default gen_random_uuid(),
+  match_date text,
+  time       text,
+  event      text,
+  grp        text,
+  court      text,
+  venue      text,
+  home_team  text,
+  home_seed  int,
+  away_team  text,
+  away_seed  int,
+  sort_order int default 0,
+  created_at timestamptz default now()
+);
+
+create table if not exists assignments (
+  match_id    uuid references matches(id)  on delete cascade,
+  referee_id  uuid references referees(id) on delete cascade,
+  primary key (match_id, referee_id)
+);
+
+-- RLS: offener Zugriff über den Anon-Key (kleines internes Tool).
+-- Für strengeren Schutz Policies anpassen oder Supabase-Auth ergänzen.
+alter table referees   enable row level security;
+alter table matches    enable row level security;
+alter table assignments enable row level security;
+
+create policy "anon all referees"   on referees   for all using (true) with check (true);
+create policy "anon all matches"     on matches    for all using (true) with check (true);
+create policy "anon all assignments" on assignments for all using (true) with check (true);`;
+
+function setBeacon(){
+  const label = state.backend==='supabase'
+    ? (state.connected? 'Supabase verbunden' : 'Supabase nicht verbunden')
+    : 'Lokaler Speicher';
+  const cls = state.backend==='supabase' ? (state.connected?'on':'off') : 'local';
+  const b=$('#beacon'); b.className='beacon '+cls; $('#beaconTxt').textContent=label;
+  const b2=$('#beacon2'); if(b2){ b2.className='beacon '+cls; $('#beacon2Txt').textContent=label; }
+  $('#storeMode').textContent = label;
+}
+
+/* ============================================================
+   CONFIG / CONNECT
+   ============================================================ */
+function loadCfg(){ try{ return JSON.parse(localStorage.getItem(LS.cfg)||'{}'); }catch{ return {}; } }
+function saveCfg(c){ localStorage.setItem(LS.cfg,JSON.stringify(c)); }
+
+async function connect(cfg,{silent=false}={}){
+  if(cfg.backend==='supabase' && cfg.url && cfg.key){
+    try{
+      state.supa = window.supabase.createClient(cfg.url,cfg.key);
+      state.backend='supabase';
+      await store.loadAll();
+      state.connected=true;
+      if(!silent) toast('Mit Supabase verbunden');
+    }catch(e){
+      state.connected=false; state.backend='supabase';
+      if(!silent) toast('Verbindung fehlgeschlagen: '+(e.message||e));
+      console.error(e);
+    }
+  } else {
+    state.backend='local'; state.supa=null; state.connected=false;
+    await store.loadAll();
+  }
+  setBeacon(); renderAll();
+}
+
+function renderAll(){ renderPlan(); renderRefs(); renderBoard(); }
+function switchView(name){
+  $$('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.view===name));
+  $$('.view').forEach(v=>v.classList.remove('active'));
+  const el=$('#view-'+name); if(el) el.classList.add('active');
+  if(name==='board') renderBoard();
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+// tabs
+$('#tabs').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-view]'); if(!b) return;
+  switchView(b.dataset.view);
+});
+
+// plan interactions (delegated)
+$('#view-plan').addEventListener('click',async e=>{
+  const dp=e.target.closest('[data-date]'); if(dp){ state.selDate=dp.dataset.date; state.selTime=null; renderPlan(); return; }
+  const tp=e.target.closest('[data-time]'); if(tp){ state.selTime=tp.dataset.time; renderPlan(); return; }
+  const pk=e.target.closest('[data-pick]'); if(pk){ e.stopPropagation(); openPicker(pk.dataset.pick,pk); return; }
+  const un=e.target.closest('[data-unassign]'); if(un){
+    const [mid,rid]=un.dataset.unassign.split('|');
+    try{ await store.unassign(mid,rid); renderPlan(); }catch(err){ toast('Fehler: '+(err.message||err)); }
+    return;
+  }
+});
+
+// board interactions
+$('#view-board').addEventListener('click',e=>{
+  const dp=e.target.closest('[data-bdate]'); if(dp){ state.boardDate=dp.dataset.bdate; renderBoard(); return; }
+  const cf=e.target.closest('#clearFilter'); if(cf){ state.refFilter=''; renderBoard(); return; }
+});
+$('#refFilter').addEventListener('change',e=>{ state.refFilter=e.target.value; renderBoard(); });
+$('#btnRefreshBoard').addEventListener('click',async ()=>{ try{ await store.loadAll(); renderBoard(); toast('Aktualisiert'); }catch(err){ toast('Fehler: '+(err.message||err)); } });
+$('#btnPrint').addEventListener('click',doPrint);
+$('#btnShare').addEventListener('click',openShare);
+
+// share modal
+$('#shareClose').addEventListener('click',()=>$('#shareModal').classList.remove('show'));
+$('#shareModal').addEventListener('click',e=>{ if(e.target.id==='shareModal') $('#shareModal').classList.remove('show'); });
+$('#sharePick').addEventListener('change',e=>{ $('#sharePersonal').value = e.target.value? shareLink(e.target.value):''; });
+$('#shareModal').addEventListener('click',async e=>{
+  const c=e.target.closest('[data-copy]'); if(!c) return;
+  const val=$('#'+c.dataset.copy).value; if(!val){ toast('Erst einen Schiedsrichter wählen'); return; }
+  try{ await navigator.clipboard.writeText(val); toast('Link kopiert'); }catch{ toast('Kopieren nicht möglich'); }
+});
+
+// import: file
+$('#fileDrop').addEventListener('click',()=>$('#fileInput').click());
+$('#fileInput').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    let txt='';
+    if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){ txt=await extractPdf(f); }
+    else { txt=await f.text(); }
+    $('#importText').value=txt; toast('Datei geladen — jetzt „Analysieren“');
+  }catch(err){ toast('Datei-Fehler: '+(err.message||err)); console.error(err); }
+});
+$('#btnParse').addEventListener('click',()=>{
+  const txt=$('#importText').value.trim();
+  if(!txt){ toast('Bitte Text einfügen oder Datei laden'); return; }
+  state.parsed=parseSchedule(txt);
+  $('#parseInfo').textContent = state.parsed.length? `${state.parsed.length} Begegnungen erkannt` : 'Keine Begegnungen erkannt — Format prüfen';
+  renderPreview();
+});
+$('#prevBody').addEventListener('input',e=>{
+  const inp=e.target.closest('input[data-f]'); if(!inp) return;
+  state.parsed[+inp.dataset.i][inp.dataset.f]=inp.value;
+});
+$('#btnCancelImport').addEventListener('click',()=>{ state.parsed=[]; $('#previewCard').style.display='none'; $('#parseInfo').textContent=''; });
+$('#btnImport').addEventListener('click',async ()=>{
+  if(!state.parsed.length) return;
+  const date=$('#impDate').value.trim();
+  const rows=state.parsed.map(r=>({
+    match_date: r.match_date||date||null, time:r.time||'', event:r.event||'', grp:r.grp||'',
+    court:r.court||'', venue:r.venue||'', home_team:r.home_team||'', home_seed:r.home_seed||null,
+    away_team:r.away_team||'', away_seed:r.away_seed||null, sort_order:r.sort_order??0
+  }));
+  try{
+    if($('#impReplace').checked){
+      const dset=[...new Set(rows.map(r=>r.match_date))];
+      for(const d of dset) if(d) await store.clearMatchesForDate(d);
+    }
+    await store.addMatches(rows);
+    toast(`${rows.length} Begegnungen importiert`);
+    state.parsed=[]; $('#previewCard').style.display='none'; $('#importText').value=''; $('#parseInfo').textContent='';
+    state.selDate=rows[0].match_date; state.selTime=null;
+    renderPlan();
+    $$('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.view==='plan'));
+    $$('.view').forEach(v=>v.classList.remove('active')); $('#view-plan').classList.add('active');
+  }catch(err){ toast('Import-Fehler: '+(err.message||err)); console.error(err); }
+});
+
+// settings: referees
+$('#btnAddRef').addEventListener('click',async ()=>{
+  const name=$('#refName').value.trim(); if(!name){ toast('Name eingeben'); return; }
+  try{ await store.addReferee({name,note:$('#refNote').value.trim()}); $('#refName').value=''; $('#refNote').value=''; renderRefs(); renderPlan(); }
+  catch(err){ toast('Fehler: '+(err.message||err)); }
+});
+$('#refName').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btnAddRef').click(); });
+$('#refNote').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btnAddRef').click(); });
+$('#refList').addEventListener('click',async e=>{
+  const del=e.target.closest('[data-del-ref]');
+  if(del){ if(confirm('Schiedsrichter löschen? Bestehende Zuteilungen werden entfernt.')){ try{ await store.deleteReferee(del.dataset.delRef); renderRefs(); renderPlan(); }catch(err){ toast('Fehler: '+(err.message||err)); } } return; }
+  const act=e.target.closest('[data-toggle-active]');
+  if(act){ const r=state.referees.find(x=>x.id===act.dataset.toggleActive); try{ await store.updateReferee(r.id,{active:!(r.active!==false)}); renderRefs(); renderPlan(); }catch(err){ toast('Fehler: '+(err.message||err)); } }
+});
+
+// settings: backend
+$('#backendSel').addEventListener('change',e=>{
+  $('#supaFields').style.display = e.target.value==='supabase'?'block':'none';
+});
+$('#btnConnect').addEventListener('click',async ()=>{
+  const backend=$('#backendSel').value;
+  const cfg={backend, url:$('#supaUrl').value.trim(), key:$('#supaKey').value.trim()};
+  saveCfg(cfg);
+  await connect(cfg);
+});
+$('#btnShowSql').addEventListener('click',()=>{
+  const box=$('#sqlBox'); const show=box.style.display==='none';
+  box.style.display=show?'block':'none'; $('#sqlText').textContent=SQL; $('#btnShowSql').textContent=show?'SQL-Schema ausblenden':'SQL-Schema anzeigen';
+});
+$('#btnCopySql').addEventListener('click',async ()=>{ try{ await navigator.clipboard.writeText(SQL); toast('SQL kopiert'); }catch{ toast('Kopieren nicht möglich'); } });
+$('#btnReload').addEventListener('click',async ()=>{ try{ await store.loadAll(); renderAll(); toast('Neu geladen'); }catch(err){ toast('Fehler: '+(err.message||err)); } });
+$('#btnWipe').addEventListener('click',async ()=>{ if(confirm('Wirklich ALLE Begegnungen löschen?')){ try{ await store.wipeMatches(); renderAll(); toast('Begegnungen gelöscht'); }catch(err){ toast('Fehler: '+(err.message||err)); } } });
+
+/* ============================================================
+   VIEW-ONLY (geteilter Link)
+   ============================================================ */
+function enterViewOnly(){
+  document.body.classList.add('view-only');
+  $('nav.tabs').style.display='none';
+  $('#beacon').style.display='none';
+  $('#btnShare').style.display='none';           // im geteilten Link nicht nötig
+  switchView('board');
+  // live: alle 30s neu laden
+  setInterval(async ()=>{ try{ await store.loadAll(); renderBoard(); }catch(e){} }, 30000);
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+(async function init(){
+  if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const saved=loadCfg();
+  const hasEmbedded = !!(EMBEDDED_SUPABASE.url && EMBEDDED_SUPABASE.key);
+  const cfg = hasEmbedded ? {backend:'supabase', url:EMBEDDED_SUPABASE.url, key:EMBEDDED_SUPABASE.key} : saved;
+
+  // settings fields reflect the current config
+  $('#backendSel').value = cfg.backend==='supabase'?'supabase':'local';
+  $('#supaFields').style.display = cfg.backend==='supabase'?'block':'none';
+  $('#supaUrl').value = saved.url||EMBEDDED_SUPABASE.url||'';
+  $('#supaKey').value = saved.key||EMBEDDED_SUPABASE.key||'';
+
+  await connect(cfg,{silent:true});
+  if(VIEW_ONLY) enterViewOnly();
+})();
+</script>
+</body>
+</html>
