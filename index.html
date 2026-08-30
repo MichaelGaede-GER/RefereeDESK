@@ -82,6 +82,21 @@
   .refchip button:hover{opacity:1}
   .addref{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 12px;font-weight:600;font-size:13px}
   .addref:hover{border-color:var(--red);color:var(--red-ink)}
+  .addref.sm{padding:2px 9px;font-size:13px;line-height:1.3}
+  /* position rows in the assign card */
+  .poslist{padding:4px 13px 13px;display:flex;flex-direction:column;gap:6px}
+  .posrow{display:flex;align-items:center;gap:9px;min-height:30px}
+  .poslbl{font-family:var(--disp);font-weight:800;font-size:12px;color:#fff;background:var(--ink);border-radius:6px;padding:2px 8px;min-width:34px;text-align:center;flex:0 0 auto}
+  .posrefs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:1}
+  .menu-pos{font-size:12px;color:var(--muted);padding:2px 2px 6px}
+  .menu-pos b{color:var(--ink)}
+  /* board position lines */
+  .bref .posline{display:flex;gap:5px;align-items:baseline;justify-content:flex-end;flex-wrap:wrap;width:100%}
+  .bref .posline .pl{font-family:var(--disp);font-weight:800;font-size:11px;color:var(--muted);min-width:26px;text-align:right}
+  /* court plan + print position labels */
+  .cp-cell .sr .rn .pp,.pb-pos .pp{font-weight:800;color:var(--ink);margin-right:3px}
+  .pb-pos{font-size:11.5px;margin:0 0 0 39px}
+  .pb-pos .na{color:#c8102e}
   .none-ref{color:var(--red);font-size:12.5px;font-weight:600}
 
   /* assignment popover — fixed to viewport so it is never clipped by the card */
@@ -167,7 +182,8 @@
 
   /* ---- auth ---- */
   .userchip{display:flex;align-items:center;gap:9px;white-space:nowrap}
-  .userchip .who{font-size:12.5px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis}
+  .userchip .who{font-size:12.5px;color:var(--muted);max-width:280px;overflow:hidden;text-overflow:ellipsis}
+  .role-tag{font-size:10px;font-weight:700;color:#fff;background:var(--go);border-radius:999px;padding:1px 7px;margin-left:5px}
   .gate{position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,#f3f4f6,#e7e9ee);display:flex;align-items:center;justify-content:center;padding:20px}
   .gate-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 60px rgba(20,22,26,.18);width:100%;max-width:380px;padding:26px 26px 22px}
   .gate-card h2{font-family:var(--disp);font-weight:800;font-size:24px;text-align:center;margin-top:6px}
@@ -454,7 +470,7 @@
       <div class="card">
         <div class="ch"><h3>Import schedule</h3></div>
         <div class="cb">
-          <p class="hint" style="margin-top:0">Upload a file from the tournament software (<b>.pdf</b> or <b>.txt</b>) or paste the text directly. Then review the detected matches and import.</p>
+          <p class="hint" style="margin-top:0">Upload a file from the tournament software (<b>.pdf</b> or <b>.txt</b>) or paste the text directly. Both the league-planner list and the detailed court sheet (with positions WS1…/MS1…) are recognised automatically — the court sheet also sets the positions for this event. Then review and import.</p>
           <div class="file-drop" id="fileDrop" style="margin:12px 0">
             <input type="file" id="fileInput" accept=".pdf,.txt,text/plain,application/pdf" style="display:none">
             <div><b>Choose file</b> · PDF or TXT — or paste text below</div>
@@ -480,6 +496,7 @@
             </label>
           </div>
           <p class="hint" style="margin-top:0">You can still correct court, home &amp; away here if the detection is ever off.</p>
+          <p class="hint" id="impPositions" style="display:none;margin-top:0;color:var(--go-ink)"></p>
           <div class="prevwrap" style="margin:10px 0">
             <table class="prev">
               <thead><tr><th>Time</th><th>Court</th><th>Venue</th><th>Competition</th><th>Home</th><th></th><th>Away</th></tr></thead>
@@ -572,6 +589,18 @@
         <div class="cb">
           <p class="hint" style="margin-top:0" id="enrollHint">Pick from the database who takes part in this event. Only these appear in scheduling.</p>
           <div class="dblist" id="enrollList"></div>
+        </div>
+      </div>
+
+      <div class="card" id="positionsCard">
+        <div class="ch"><h3>Positions per competition</h3><span class="hint" id="posInfo"></span></div>
+        <div class="cb">
+          <p class="hint" style="margin-top:0">For each competition detected in this event, enter the positions in the order they are played, separated by commas — e.g. <b>W1, W2, W3</b> for women and <b>M1, M2, M3, M4</b> for men. The order here is the order of play. Leave empty for a single referee per tie.</p>
+          <div id="posList"></div>
+          <div class="row-inline" style="margin-top:10px">
+            <button class="btn sm" id="btnSavePositions">Save positions</button>
+            <span class="hint" id="posSaved"></span>
+          </div>
         </div>
       </div>
 
@@ -686,7 +715,7 @@ const state = {
   referees:[],                                 // Stammdatenbank (alle)
   enrollment:{},                               // eventId -> [refId...]
   matches:[], assignments:{},                  // matchId -> [refId...] (aktuelles Event)
-  selDate:null, selTime:null, parsed:[],
+  selDate:null, selTime:null, parsed:[], parsedPositions:{},
   boardDate:null, courtsDate:null, refFilter:URL_REF
 };
 
@@ -742,14 +771,14 @@ const store = {
       if(ids.length){
         const a=await state.supa.from('assignments').select('*').in('match_id',ids);
         if(a.error) throw a.error;
-        (a.data||[]).forEach(x=>{ (map[x.match_id]=map[x.match_id]||[]).push(x.referee_id); });
+        (a.data||[]).forEach(x=>{ (map[x.match_id]=map[x.match_id]||[]).push({position:x.position||'', referee_id:x.referee_id}); });
       }
       state.assignments=map;
     } else {
       const all=JSON.parse(localStorage.getItem(LS.matches)||'[]');
       state.matches=all.filter(m=>m.event_id===ev);
       const asg=JSON.parse(localStorage.getItem(LS.asg)||'{}');
-      const map={}; state.matches.forEach(m=>{ if(asg[m.id]) map[m.id]=asg[m.id]; });
+      const map={}; state.matches.forEach(m=>{ if(asg[m.id]) map[m.id]=normalizeAsg(asg[m.id]); });
       state.assignments=map;
     }
   },
@@ -816,12 +845,12 @@ const store = {
     } else {
       state.referees=state.referees.filter(x=>x.id!==id);
       Object.keys(state.enrollment).forEach(ev=>{ state.enrollment[ev]=state.enrollment[ev].filter(x=>x!==id); });
-      const asg=this._allAsgLocal(); Object.keys(asg).forEach(mid=>{ asg[mid]=asg[mid].filter(x=>x!==id); }); this._saveAllAsgLocal(asg);
+      const asg=this._allAsgLocal(); Object.keys(asg).forEach(mid=>{ asg[mid]=normalizeAsg(asg[mid]).filter(a=>a.referee_id!==id); }); this._saveAllAsgLocal(asg);
       this._saveBaseLocal();
     }
     state.referees=state.referees.filter(x=>x.id!==id);
     Object.keys(state.enrollment).forEach(ev=>{ state.enrollment[ev]=(state.enrollment[ev]||[]).filter(x=>x!==id); });
-    for(const mid in state.assignments) state.assignments[mid]=state.assignments[mid].filter(x=>x!==id);
+    for(const mid in state.assignments) state.assignments[mid]=state.assignments[mid].filter(a=>a.referee_id!==id);
   },
 
   // --- Zuordnung Schiedsrichter <-> Event ---
@@ -840,11 +869,19 @@ const store = {
       if(mids.length){ await state.supa.from('assignments').delete().eq('referee_id',refId).in('match_id',mids); }
     }
     state.enrollment[eventId]=(state.enrollment[eventId]||[]).filter(x=>x!==refId);
-    for(const mid in state.assignments) state.assignments[mid]=state.assignments[mid].filter(x=>x!==refId);
+    for(const mid in state.assignments) state.assignments[mid]=state.assignments[mid].filter(a=>a.referee_id!==refId);
     if(state.backend!=='supabase'){
-      const asg=this._allAsgLocal(); state.matches.forEach(m=>{ if(asg[m.id]) asg[m.id]=asg[m.id].filter(x=>x!==refId); }); this._saveAllAsgLocal(asg);
+      const asg=this._allAsgLocal(); state.matches.forEach(m=>{ if(asg[m.id]) asg[m.id]=normalizeAsg(asg[m.id]).filter(a=>a.referee_id!==refId); }); this._saveAllAsgLocal(asg);
       this._saveBaseLocal();
     }
+  },
+
+  // --- Event positions config ---
+  async setEventPositions(eventId, cfgObj){
+    const positions=JSON.stringify(cfgObj||{});
+    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('events').update({positions}).eq('id',eventId); if(error) throw error; }
+    const e=state.events.find(x=>x.id===eventId); if(e) e.positions=positions;
+    if(state.backend!=='supabase') this._saveBaseLocal();
   },
 
   // --- Begegnungen ---
@@ -881,19 +918,25 @@ const store = {
     return {added:fresh.length, skipped};
   },
 
-  async assign(matchId,refId){
-    const arr=state.assignments[matchId]=state.assignments[matchId]||[];
-    if(arr.includes(refId)) return;
-    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('assignments').insert({match_id:matchId,referee_id:refId}); if(error) throw error; }
-    arr.push(refId);
+  async assign(matchId,refId,position=''){
+    const arr=state.assignments[matchId]=normalizeAsg(state.assignments[matchId]);
+    if(arr.some(a=>a.referee_id===refId && (a.position||'')===(position||''))) return;
+    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('assignments').insert({match_id:matchId,referee_id:refId,position:position||''}); if(error) throw error; }
+    arr.push({position:position||'', referee_id:refId});
     if(state.backend!=='supabase'){ const asg=this._allAsgLocal(); asg[matchId]=arr; this._saveAllAsgLocal(asg); }
   },
-  async unassign(matchId,refId){
-    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('assignments').delete().eq('match_id',matchId).eq('referee_id',refId); if(error) throw error; }
-    state.assignments[matchId]=(state.assignments[matchId]||[]).filter(x=>x!==refId);
+  async unassign(matchId,refId,position=''){
+    if(state.backend==='supabase' && state.supa){ const {error}=await state.supa.from('assignments').delete().eq('match_id',matchId).eq('referee_id',refId).eq('position',position||''); if(error) throw error; }
+    state.assignments[matchId]=normalizeAsg(state.assignments[matchId]).filter(a=>!(a.referee_id===refId && (a.position||'')===(position||'')));
     if(state.backend!=='supabase'){ const asg=this._allAsgLocal(); asg[matchId]=state.assignments[matchId]; this._saveAllAsgLocal(asg); }
   }
 };
+
+// alte (String-Array) Zuteilungen in {position, referee_id}-Objekte migrieren
+function normalizeAsg(arr){
+  if(!Array.isArray(arr)) return [];
+  return arr.map(a=> typeof a==='string' ? {position:'', referee_id:a} : {position:a.position||'', referee_id:a.referee_id});
+}
 
 /* ============================================================
    PARSER — tournamentsoftware "Squash League Planner" export
@@ -949,6 +992,58 @@ function parseSchedule(text){
   return raw;
 }
 
+/* ---- second format: detailed "court sheet" export (with positions WS1.., MS1..) ---- */
+function parseCourtTeams(s){
+  const seedRe=/\[([\d/]+)\]/g; const seeds=[...s.matchAll(seedRe)];
+  const courtRe=/^((?:GC|C\d+|\d+)(?:\s*&\s*(?:GC|C\d+|\d+))*)\s+(.*)$/i;
+  let court='',home='',hs='',away='',as='';
+  if(seeds.length>=2){
+    const i1=seeds[0].index,i2=seeds[1].index;
+    const before=s.slice(0,i1).trim(); hs=seeds[0][1];
+    away=s.slice(i1+seeds[0][0].length,i2).trim(); as=seeds[1][1];
+    const cm=before.match(courtRe); if(cm){court=cm[1].trim();home=cm[2].trim();} else home=before;
+  } else { const cm=s.match(courtRe); if(cm){court=cm[1].trim();home=cm[2].trim();} else home=s; }
+  return {court,home,home_seed:hs,away_team:away,away_seed:as};
+}
+function isCourtSheet(text){
+  const lines=text.split(/\r?\n/).map(l=>l.trim());
+  const courtHeaders=lines.filter(l=>l==='Court').length;
+  const posLines=lines.filter(l=>/^[A-Za-z]{1,4}\d+\s+\d+\s*-?\s*$/.test(l)).length;
+  return courtHeaders>=1 && posLines>=1;
+}
+function parseCourtSheet(text){
+  const lines=text.split(/\r?\n/).map(l=>l.trim());
+  let date=null,order=0; const rows=[]; const positions={};
+  const posLineRe=/^([A-Za-z]{1,4}\d+)\s+\d+\s*-?.*$/;
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i]; let m;
+    if((m=line.match(/^Matches of\b.*?(\d{1,2}\.\d{1,2}\.\d{4})/))){ date=m[1]; continue; }
+    if(line!=='Court') continue;
+    const courtLine=lines[i+1]||''; const compTime=lines[i+2]||''; const dLine=lines[i+3]||'';
+    const ct=parseCourtTeams(courtLine);
+    const tm=compTime.match(/^(.*?)\s+(\d{1,2}:\d{2})\s*$/);
+    let comp=tm?tm[1].trim():compTime.trim(); const time=tm?tm[2]:'';
+    comp=comp.replace(/\s*-\s*$/,'').trim();
+    let d=date; const dm=dLine.match(/(\d{1,2}\.\d{1,2}\.\d{4})/); if(dm) d=dm[1];
+    const pos=[]; let j=i+4;
+    for(;j<lines.length;j++){ const L=lines[j];
+      if(L==='-'||L==='Court'||/^Matches of/.test(L)||/Squash League Planner/.test(L)||/^Page \d/.test(L)) break;
+      const pm=L.match(posLineRe); if(pm) pos.push(pm[1]);
+    }
+    if(comp && pos.length){ if(!positions[comp]||positions[comp].length<pos.length) positions[comp]=pos; }
+    if(ct.court || ct.home || ct.away_team){
+      rows.push({match_date:d,time,event:comp,grp:'',court:ct.court,venue:'',home_team:ct.home,home_seed:ct.home_seed,away_team:ct.away_team,away_seed:ct.away_seed,sort_order:order++});
+    }
+    i=j-1;
+  }
+  return {rows,positions};
+}
+// auto-detect format; returns {rows, positions}
+function analyzeImport(text){
+  if(isCourtSheet(text)) return parseCourtSheet(text);
+  return { rows: parseSchedule(text), positions: {} };
+}
+
 /* ============================================================
    PLAN VIEW
    ============================================================ */
@@ -966,9 +1061,20 @@ function enrolledIds(){ return new Set(state.enrollment[state.curEvent]||[]); }
 // „aktive" Schiedsrichter = dem aktuellen Event zugeordnet
 function activeRefs(){ const ids=enrolledIds(); return state.referees.filter(r=>ids.has(r.id)); }
 function refName(id){ const r=state.referees.find(x=>x.id===id); return r?r.name:'—'; }
-// which matches (in same date+time) a referee is assigned to
+
+// --- assignments (with positions) ---
+function asgList(matchId){ return normalizeAsg(state.assignments[matchId]); }
+function refsForMatch(matchId){ const seen=new Set(),out=[]; asgList(matchId).forEach(a=>{ if(!seen.has(a.referee_id)){seen.add(a.referee_id);out.push(a.referee_id);} }); return out; }
+function refsForPosition(matchId,pos){ return asgList(matchId).filter(a=>(a.position||'')===(pos||'')).map(a=>a.referee_id); }
+
+// --- positions config per event/category ---
+function eventPositions(){ const e=curEventObj(); if(!e) return {}; try{ return JSON.parse(e.positions||'{}'); }catch{ return {}; } }
+function categoriesInEvent(){ return [...new Set(state.matches.map(m=>m.event||'').filter(Boolean))]; }
+function positionsForMatch(m){ const cfg=eventPositions(); return (cfg[m.event||'']||[]).filter(Boolean); }
+
+// which matches (in same date+time) a referee is assigned to (any position)
 function busyMap(date,time){
-  const map={}; matchesAt(date,time).forEach(m=>{ (state.assignments[m.id]||[]).forEach(rid=>{ (map[rid]=map[rid]||[]).push(m); }); });
+  const map={}; matchesAt(date,time).forEach(m=>{ refsForMatch(m.id).forEach(rid=>{ (map[rid]=map[rid]||[]).push(m); }); });
   return map;
 }
 
@@ -1014,12 +1120,26 @@ function renderPlan(){
 }
 
 function matchCard(m){
-  const asg = state.assignments[m.id]||[];
   const alt = /^SBC/i.test(m.court);
   const editable = canAssign();
-  const chips = asg.map(rid=>`<span class="refchip">${esc(refName(rid))}${editable?`<button data-unassign="${m.id}|${rid}" title="Remove">×</button>`:''}</span>`).join('');
-  const noneWarn = asg.length===0 ? `<span class="none-ref">no referee</span>` : '';
-  const adder = editable ? `<div class="picker"><button class="addref" data-pick="${m.id}">+ assign</button></div>` : '';
+  const positions = positionsForMatch(m);
+  let refsBlock;
+  if(positions.length){
+    // one row per position (M1..M4 / W1..W3), in play order
+    refsBlock = `<div class="poslist">` + positions.map(pos=>{
+      const rids=refsForPosition(m.id,pos);
+      const chips=rids.map(rid=>`<span class="refchip">${esc(refName(rid))}${editable?`<button data-unassign="${m.id}|${rid}|${esc(pos)}" title="Remove">×</button>`:''}</span>`).join('');
+      const none=rids.length?'':`<span class="none-ref">–</span>`;
+      const add=editable?`<button class="addref sm" data-pick="${m.id}" data-pos="${esc(pos)}">+</button>`:'';
+      return `<div class="posrow"><span class="poslbl">${esc(pos)}</span><div class="posrefs">${chips}${none}${add}</div></div>`;
+    }).join('') + `</div>`;
+  } else {
+    const rids=refsForPosition(m.id,'');
+    const chips=rids.map(rid=>`<span class="refchip">${esc(refName(rid))}${editable?`<button data-unassign="${m.id}|${rid}|" title="Remove">×</button>`:''}</span>`).join('');
+    const none=rids.length?'':`<span class="none-ref">no referee</span>`;
+    const add=editable?`<div class="picker"><button class="addref" data-pick="${m.id}" data-pos="">+ assign</button></div>`:'';
+    refsBlock=`<div class="refs">${chips}${none}${add}</div>`;
+  }
   return `<div class="match">
     <div class="mhead">
       <span class="court${alt?' alt':''}">${esc(m.court||'—')}</span>
@@ -1030,16 +1150,13 @@ function matchCard(m){
       <span class="vs">vs</span>
       <span class="side away">${esc(m.away_team)}${m.away_seed?`<span class="seed">[${m.away_seed}]</span>`:''}</span>
     </div>
-    <div class="refs">
-      ${chips}${noneWarn}
-      ${adder}
-    </div>
+    ${refsBlock}
   </div>`;
 }
 
-let pickerMatchId=null;
-function pickerBody(matchId, query=''){
-  const asg = new Set(state.assignments[matchId]||[]);
+let pickerMatchId=null, pickerPos='';
+function pickerBody(matchId, position='', query=''){
+  const assigned = new Set(refsForPosition(matchId, position));
   const busy = busyMap(state.selDate,state.selTime);
   const q=query.trim().toLowerCase();
   let refs = activeRefs();
@@ -1047,49 +1164,49 @@ function pickerBody(matchId, query=''){
   if(q) refs = refs.filter(r=>r.name.toLowerCase().includes(q));
   if(!refs.length) return `<div class="opt empty">No match for "${esc(query)}".</div>`;
   return refs.map(r=>{
-    const on=asg.has(r.id);
+    const on=assigned.has(r.id);
     const other=(busy[r.id]||[]).filter(x=>x.id!==matchId);
     const busyNote = other.length ? `<span class="busy">busy ${esc(other.map(x=>x.court).join(', '))}</span>` : '';
-    return `<div class="opt${on?' on':''}" data-toggle="${matchId}|${r.id}">
+    return `<div class="opt${on?' on':''}" data-toggle="${matchId}|${r.id}|${esc(position)}">
       <span class="box">${on?'✓':''}</span><span class="nm">${esc(r.name)}</span>${busyNote}</div>`;
   }).join('');
 }
-async function toggleAssign(mid,rid){
-  const on=(state.assignments[mid]||[]).includes(rid);
+async function toggleAssign(mid,rid,pos){
+  const on=refsForPosition(mid,pos).includes(rid);
   const q = $('#__pickerSearch') ? $('#__pickerSearch').value : '';
-  try{ on? await store.unassign(mid,rid) : await store.assign(mid,rid); }
+  try{ on? await store.unassign(mid,rid,pos) : await store.assign(mid,rid,pos); }
   catch(err){ toast('Error: '+(err.message||err)); return; }
   renderPlan();
-  const btn=$(`[data-pick="${mid}"]`);
-  if(btn){ openPicker(mid,btn); const s=$('#__pickerSearch'); if(s&&q){ s.value=q; $('#__pickerList').innerHTML=pickerBody(mid,q); } }
+  const btn=$(`[data-pick="${mid}"][data-pos="${cssEsc(pos)}"]`);
+  if(btn){ openPicker(mid,btn,pos); const s=$('#__pickerSearch'); if(s&&q){ s.value=q; $('#__pickerList').innerHTML=pickerBody(mid,pos,q); } }
 }
-function openPicker(matchId, anchorBtn){
+function cssEsc(s){ return (s||'').replace(/["\\]/g,'\\$&'); }
+function openPicker(matchId, anchorBtn, position=''){
   closePicker();
-  pickerMatchId=matchId;
+  pickerMatchId=matchId; pickerPos=position;
   const menu=document.createElement('div'); menu.className='menu'; menu.id='__menu';
-  menu.innerHTML = `<div class="mh"><input type="text" id="__pickerSearch" placeholder="Search referee…" autocomplete="off"></div>
-    <div id="__pickerList">${pickerBody(matchId)}</div>`;
+  const head = position?`<div class="menu-pos">Position <b>${esc(position)}</b></div>`:'';
+  menu.innerHTML = `<div class="mh">${head}<input type="text" id="__pickerSearch" placeholder="Search referee…" autocomplete="off"></div>
+    <div id="__pickerList">${pickerBody(matchId,position)}</div>`;
   document.body.appendChild(menu);
-  // menu lives on <body>, so it handles its own clicks (delegation from #view-plan can't reach it)
   menu.addEventListener('click',e=>{
     const tg=e.target.closest('[data-toggle]'); if(!tg) return;
     e.stopPropagation();
-    const [mid,rid]=tg.dataset.toggle.split('|');
-    toggleAssign(mid,rid);
+    const [mid,rid,pos]=tg.dataset.toggle.split('|');
+    toggleAssign(mid,rid,pos||'');
   });
-  // position fixed relative to the button, kept inside the viewport, and sized to fit (scrollable)
   const r=anchorBtn.getBoundingClientRect();
   const mw=menu.offsetWidth;
   let left=r.left; if(left+mw > window.innerWidth-8) left=Math.max(8, window.innerWidth-mw-8);
   const spaceBelow=window.innerHeight-r.bottom-12, spaceAbove=r.top-12;
-  const below = spaceBelow>=180 || spaceBelow>=spaceAbove;   // open where there is more room
+  const below = spaceBelow>=180 || spaceBelow>=spaceAbove;
   const avail = Math.max(160, (below?spaceBelow:spaceAbove));
   menu.style.maxHeight=Math.min(360,avail)+'px';
   menu.style.left=left+'px';
   if(below){ menu.style.top=(r.bottom+6)+'px'; }
   else { menu.style.top=Math.max(8, r.top-6-menu.offsetHeight)+'px'; }
   const search=$('#__pickerSearch');
-  search.addEventListener('input',()=>{ $('#__pickerList').innerHTML=pickerBody(matchId, search.value); });
+  search.addEventListener('input',()=>{ $('#__pickerList').innerHTML=pickerBody(matchId,position,search.value); });
   search.focus();
   setTimeout(()=>{ document.addEventListener('click',outsideClose); window.addEventListener('resize',closePicker); },0);
 }
@@ -1115,7 +1232,7 @@ function renderSidePanel(ms){
   // workload for the whole day
   const dayMatches = state.matches.filter(m=>(m.match_date||'—')===state.selDate);
   const counts={}; refs.forEach(r=>counts[r.id]=0);
-  dayMatches.forEach(m=>(state.assignments[m.id]||[]).forEach(rid=>{ if(rid in counts) counts[rid]++; }));
+  dayMatches.forEach(m=>asgList(m.id).forEach(a=>{ if(a.referee_id in counts) counts[a.referee_id]++; }));
   const max=Math.max(1,...Object.values(counts));
   const rows=refs.slice().sort((a,b)=>counts[b.id]-counts[a.id]);
   $('#workload').innerHTML = rows.length? rows.map(r=>{
@@ -1162,15 +1279,23 @@ function renderBoard(){
   let html='';
   ts.forEach(t=>{
     let ms=matchesAt(state.boardDate,t);
-    if(filterId!=null) ms=ms.filter(m=>(state.assignments[m.id]||[]).includes(filterId));
+    if(filterId!=null) ms=ms.filter(m=>refsForMatch(m.id).includes(filterId));
     if(!ms.length) return;
     html += `<div class="btimeblock"><div class="btime"><h3 class="num">${esc(t)}</h3><div class="rule"></div></div>`;
     ms.forEach(m=>{
-      const asg=state.assignments[m.id]||[];
       const alt=/^SBC/i.test(m.court);
-      const refs = asg.length
-        ? asg.map(rid=>{ const nm=refName(rid); const hi=cur && nm.toLowerCase()===cur.toLowerCase(); return `<span class="t${hi?' hi':''}">${esc(nm)}</span>`; }).join('')
-        : `<span class="none">no referee</span>`;
+      const positions=positionsForMatch(m);
+      const tok=(rid)=>{ const nm=refName(rid); const hi=cur && nm.toLowerCase()===cur.toLowerCase(); return `<span class="t${hi?' hi':''}">${esc(nm)}</span>`; };
+      let refs;
+      if(positions.length){
+        refs = positions.map(pos=>{
+          const rids=refsForPosition(m.id,pos);
+          return `<div class="posline"><span class="pl">${esc(pos)}</span>${rids.length?rids.map(tok).join(''):`<span class="none">–</span>`}</div>`;
+        }).join('');
+      } else {
+        const rids=refsForPosition(m.id,'');
+        refs = rids.length ? rids.map(tok).join('') : `<span class="none">no referee</span>`;
+      }
       html += `<div class="brow">
         <span class="bc${alt?' alt':''}">${esc(m.court||'—')}</span>
         <div class="bmatch"><b>${esc(m.home_team)} <span style="color:var(--muted);font-weight:600">vs</span> ${esc(m.away_team)}</b>
@@ -1195,16 +1320,25 @@ function buildPrintDoc(){
     let body='', count=0;
     ts.forEach(t=>{
       let ms=matchesAt(date,t);
-      if(filterId!=null) ms=ms.filter(m=>(state.assignments[m.id]||[]).includes(filterId));
+      if(filterId!=null) ms=ms.filter(m=>refsForMatch(m.id).includes(filterId));
       if(!ms.length) return;
       body += `<div class="pb-time">${esc(t)}</div>`;
       ms.forEach(m=>{
         count++;
-        const asg=(state.assignments[m.id]||[]).map(refName);
         const alt=/^SBC/i.test(m.court);
-        const sr = asg.length
-          ? `<div class="pb-ref"><span class="lb">Referee:</span> ${esc(asg.join(', '))}</div>`
-          : `<div class="pb-ref empty"><span class="lb">Referee:</span> not assigned</div>`;
+        const positions=positionsForMatch(m);
+        let sr;
+        if(positions.length){
+          sr = `<div class="pb-ref"><span class="lb">Referee:</span></div>` + positions.map(pos=>{
+            const names=refsForPosition(m.id,pos).map(refName);
+            return `<div class="pb-pos"><span class="pp">${esc(pos)}</span> ${names.length?esc(names.join(', ')):'<span class="na">–</span>'}</div>`;
+          }).join('');
+        } else {
+          const names=refsForPosition(m.id,'').map(refName);
+          sr = names.length
+            ? `<div class="pb-ref"><span class="lb">Referee:</span> ${esc(names.join(', '))}</div>`
+            : `<div class="pb-ref empty"><span class="lb">Referee:</span> not assigned</div>`;
+        }
         const sub=[m.event,m.grp,m.venue].filter(Boolean).join(' · ');
         const seed=s=>s?`<span class="sd"> [${esc(s)}]</span>`:'';
         body += `<div class="pb-m">
@@ -1236,10 +1370,19 @@ function courtsOrder(date){
 }
 function courtCellHTML(m){
   if(!m) return `<div class="cp-cell cp-empty"></div>`;
-  const asg=(state.assignments[m.id]||[]).map(refName);
-  const sr = asg.length
-    ? `<div class="sr"><div class="lb">Referee:</div>${asg.map(n=>`<div class="rn">${esc(n)}</div>`).join('')}</div>`
-    : `<div class="sr"><div class="lb">Referee:</div><div class="none">– not assigned</div></div>`;
+  const positions=positionsForMatch(m);
+  let sr;
+  if(positions.length){
+    sr = `<div class="sr"><div class="lb">Referee:</div>` + positions.map(pos=>{
+      const names=refsForPosition(m.id,pos).map(refName);
+      return `<div class="rn"><span class="pp">${esc(pos)}</span> ${names.length?esc(names.join(', ')):'<span class="none">–</span>'}</div>`;
+    }).join('') + `</div>`;
+  } else {
+    const names=refsForPosition(m.id,'').map(refName);
+    sr = names.length
+      ? `<div class="sr"><div class="lb">Referee:</div>${names.map(n=>`<div class="rn">${esc(n)}</div>`).join('')}</div>`
+      : `<div class="sr"><div class="lb">Referee:</div><div class="none">– not assigned</div></div>`;
+  }
   const seed = s => s?`<span class="sd"> [${esc(s)}]</span>`:'';
   return `<div class="cp-cell">
     <div class="cp-tm">
@@ -1335,6 +1478,12 @@ function renderPreview(){
   $('#prevCount').textContent = `${rows.length} matches`;
   const d = rows.find(r=>r.match_date)?.match_date || '';
   $('#impDate').value = d;
+  const posN=Object.keys(state.parsedPositions||{}).length;
+  $('#impPositions').style.display = posN?'block':'none';
+  if(posN){
+    $('#impPositions').innerHTML = 'Positions detected (will be set for this event): ' +
+      Object.entries(state.parsedPositions).map(([c,p])=>`<b>${esc(c.replace(/^ESF Club Championships\s*/,''))}</b>: ${esc(p.join(', '))}`).join(' · ');
+  }
   $('#prevBody').innerHTML = rows.map((r,i)=>`<tr>
     <td class="num">${esc(r.time||'')}</td>
     <td class="cell-sm"><input type="text" data-f="court" data-i="${i}" value="${esc(r.court||'')}"></td>
@@ -1421,6 +1570,20 @@ function renderEnroll(){
   }).join('') : `<p class="empty-note">Add referees to the database first.</p>`;
 }
 
+function renderPositionsConfig(){
+  const card=$('#positionsCard'); const ev=curEventObj();
+  if(!ev){ card.style.display='none'; return; }
+  card.style.display='block';
+  const cats=categoriesInEvent();
+  const cfg=eventPositions();
+  $('#posInfo').textContent = ev.name;
+  $('#posList').innerHTML = cats.length ? cats.map((c,i)=>{
+    const val=(cfg[c]||[]).join(', ');
+    return `<label class="fld"><span>${esc(c)}</span>
+      <input type="text" data-poscat="${esc(c)}" value="${esc(val)}" placeholder="e.g. W1, W2, W3"></label>`;
+  }).join('') : `<p class="empty-note">No competitions detected yet — import a schedule first.</p>`;
+}
+
 function renderEvents(){
   $('#evTotal').textContent = state.events.length? `${state.events.length} saved` : '';
   $('#eventList').innerHTML = state.events.length ? state.events.map(e=>{
@@ -1453,6 +1616,7 @@ create table if not exists events (
   location   text default '',
   start_date text default '',
   end_date   text default '',
+  positions  text default '{}',      -- JSON: { "<competition>": ["W1","W2",...] }
   created_at timestamptz default now()
 );
 
@@ -1495,10 +1659,22 @@ create table if not exists matches (
 create table if not exists assignments (
   match_id    uuid references matches(id)  on delete cascade,
   referee_id  uuid references referees(id) on delete cascade,
-  primary key (match_id, referee_id)
+  position    text default '',
+  primary key (match_id, referee_id, position)
 );
 
 -- Migration for databases created with an earlier version:
+alter table events    add column if not exists positions text default '{}';
+alter table assignments add column if not exists position text default '';
+-- widen the assignments primary key to include the position
+do $$
+begin
+  if exists (select 1 from pg_constraint where conname = 'assignments_pkey') then
+    alter table assignments drop constraint assignments_pkey;
+  end if;
+  alter table assignments add constraint assignments_pkey primary key (match_id, referee_id, position);
+exception when others then null;
+end $$;
 alter table matches   add column if not exists event_id uuid references events(id) on delete cascade;
 alter table matches   alter column home_seed type text using home_seed::text;
 alter table matches   alter column away_seed type text using away_seed::text;
@@ -1545,23 +1721,23 @@ declare t text;
 begin
   foreach t in array array['events','referees','event_referees','matches'] loop
     execute format($f$create policy "admin write" on %I for all to authenticated
-      using (lower(auth.jwt()->>'email') = 'michael.gaede@dsqv.de')
-      with check (lower(auth.jwt()->>'email') = 'michael.gaede@dsqv.de')$f$, t);
+      using (lower(trim(auth.jwt()->>'email')) = 'michael.gaede@dsqv.de')
+      with check (lower(trim(auth.jwt()->>'email')) = 'michael.gaede@dsqv.de')$f$, t);
   end loop;
 end $$;
 
 -- assignments: admin OR a head referee (matched by their login email)
 create policy "assign write" on assignments for all to authenticated
   using (
-    lower(auth.jwt()->>'email') = 'michael.gaede@dsqv.de'
+    lower(trim(auth.jwt()->>'email')) = 'michael.gaede@dsqv.de'
     or lower(auth.jwt()->>'email') in (
-      select lower(email) from referees where role = 'head' and coalesce(email,'') <> ''
+      select lower(trim(email)) from referees where role = 'head' and coalesce(trim(email),'') <> ''
     )
   )
   with check (
-    lower(auth.jwt()->>'email') = 'michael.gaede@dsqv.de'
+    lower(trim(auth.jwt()->>'email')) = 'michael.gaede@dsqv.de'
     or lower(auth.jwt()->>'email') in (
-      select lower(email) from referees where role = 'head' and coalesce(email,'') <> ''
+      select lower(trim(email)) from referees where role = 'head' and coalesce(trim(email),'') <> ''
     )
   );
 
@@ -1658,10 +1834,11 @@ function showGate(){
   setTimeout(()=>{ const el=$('#loginEmail'); if(el) el.focus(); },40);
 }
 function hideGate(){ $('#gate').style.display='none'; }
+function roleLabel(r){ return {admin:'Admin', head:'Head referee', referee:'Referee', viewer:'Read-only'}[r]||r; }
 function updateUserChip(){
   const chip=$('#userChip'); const authed = state.backend==='supabase' && state.user;
   chip.style.display = authed ? 'flex':'none';
-  if(authed) $('#userEmail').textContent = state.user.email||'signed in';
+  if(authed) $('#userEmail').innerHTML = `${esc(state.user.email||'signed in')} <span class="role-tag">${esc(roleLabel(currentRole()))}</span>`;
   // Konto-Karte in den Einstellungen
   const card=$('#accountCard');
   if(state.backend==='supabase'){
@@ -1722,9 +1899,9 @@ function currentRole(){
   if(state.backend!=='supabase') return 'admin';   // offline/local = full access
   if(VIEW_ONLY) return 'viewer';
   if(!state.user) return 'viewer';
-  const email=(state.user.email||'').toLowerCase();
-  if(email===ADMIN_EMAIL.toLowerCase()) return 'admin';
-  const r=state.referees.find(x=>(x.email||'').toLowerCase()===email && x.email);
+  const email=(state.user.email||'').trim().toLowerCase();
+  if(email===ADMIN_EMAIL.trim().toLowerCase()) return 'admin';
+  const r=state.referees.find(x=>(x.email||'').trim().toLowerCase()===email && (x.email||'').trim());
   if(r && r.role==='head') return 'head';
   return r ? 'referee' : 'viewer';
 }
@@ -1743,7 +1920,7 @@ function applyRole(){
   if(active && active.style.display==='none') switchView('board');
 }
 
-function renderAll(){ renderEventSwitch(); renderEvents(); renderPlan(); renderRefs(); renderBoard(); renderCourtPlan(); applyRole(); }
+function renderAll(){ renderEventSwitch(); renderEvents(); renderPlan(); renderRefs(); renderPositionsConfig(); renderBoard(); renderCourtPlan(); applyRole(); }
 
 async function selectEvent(id){
   state.curEvent=id;
@@ -1773,10 +1950,10 @@ $('#tabs').addEventListener('click',e=>{
 $('#view-plan').addEventListener('click',async e=>{
   const dp=e.target.closest('[data-date]'); if(dp){ state.selDate=dp.dataset.date; state.selTime=null; renderPlan(); return; }
   const tp=e.target.closest('[data-time]'); if(tp){ state.selTime=tp.dataset.time; renderPlan(); return; }
-  const pk=e.target.closest('[data-pick]'); if(pk){ e.stopPropagation(); openPicker(pk.dataset.pick,pk); return; }
+  const pk=e.target.closest('[data-pick]'); if(pk){ e.stopPropagation(); openPicker(pk.dataset.pick,pk,pk.dataset.pos||''); return; }
   const un=e.target.closest('[data-unassign]'); if(un){
-    const [mid,rid]=un.dataset.unassign.split('|');
-    try{ await store.unassign(mid,rid); renderPlan(); }catch(err){ toast('Error: '+(err.message||err)); }
+    const [mid,rid,pos]=un.dataset.unassign.split('|');
+    try{ await store.unassign(mid,rid,pos||''); renderPlan(); }catch(err){ toast('Error: '+(err.message||err)); }
     return;
   }
 });
@@ -1818,8 +1995,13 @@ $('#fileInput').addEventListener('change',async e=>{
 $('#btnParse').addEventListener('click',()=>{
   const txt=$('#importText').value.trim();
   if(!txt){ toast('Please paste text or load a file'); return; }
-  state.parsed=parseSchedule(txt);
-  $('#parseInfo').textContent = state.parsed.length? `${state.parsed.length} matches detected` : 'No matches detected — check the format';
+  const res=analyzeImport(txt);
+  state.parsed=res.rows||[];
+  state.parsedPositions=res.positions||{};
+  const posN=Object.keys(state.parsedPositions).length;
+  $('#parseInfo').textContent = state.parsed.length
+    ? `${state.parsed.length} matches detected${posN?` · positions for ${posN} competition${posN===1?'':'s'}`:''}`
+    : 'No matches detected — check the format';
   renderPreview();
 });
 $('#prevBody').addEventListener('input',e=>{
@@ -1842,8 +2024,15 @@ $('#btnImport').addEventListener('click',async ()=>{
       for(const d of dset) if(d) await store.clearMatchesForDate(d);
     }
     const {added,skipped}=await store.addMatchesMerged(rows);
-    toast(`${added} added${skipped?`, ${skipped} duplicates skipped`:''}`);
-    state.parsed=[]; $('#previewCard').style.display='none'; $('#importText').value=''; $('#parseInfo').textContent='';
+    // erkannte Positionen ins Event übernehmen (bestehende Konfiguration anderer Wettbewerbe bleibt)
+    let posMsg='';
+    if(state.parsedPositions && Object.keys(state.parsedPositions).length){
+      const merged={...eventPositions(), ...state.parsedPositions};
+      await store.setEventPositions(state.curEvent, merged);
+      posMsg=`, positions set`;
+    }
+    toast(`${added} added${skipped?`, ${skipped} duplicates skipped`:''}${posMsg}`);
+    state.parsed=[]; state.parsedPositions={}; $('#previewCard').style.display='none'; $('#importText').value=''; $('#parseInfo').textContent='';
     state.selDate=rows[0].match_date; state.selTime=null;
     renderAll();
     switchView('plan');
@@ -1907,6 +2096,19 @@ $('#enrollList').addEventListener('click',async e=>{
   try{ ids.has(rid) ? await store.unenroll(state.curEvent,rid) : await store.enroll(state.curEvent,rid);
     renderEnroll(); renderPlan(); renderBoard();
   }catch(err){ toast('Error: '+(err.message||err)); }
+});
+
+// settings: positions per competition
+$('#btnSavePositions').addEventListener('click',async ()=>{
+  if(!state.curEvent){ toast('Select an event first'); return; }
+  const cfg={};
+  $$('#posList input[data-poscat]').forEach(inp=>{
+    const cat=inp.dataset.poscat;
+    const list=inp.value.split(',').map(s=>s.trim()).filter(Boolean);
+    if(list.length) cfg[cat]=list;
+  });
+  try{ await store.setEventPositions(state.curEvent,cfg); renderAll(); toast('Positions saved'); }
+  catch(err){ toast('Error: '+(err.message||err)); }
 });
 
 // settings: backend
