@@ -13,7 +13,7 @@
    (nur der eigene Browser, ohne Anmeldung) — praktisch zum Testen.
    ============================================================ */
 window.RD_CONFIG = {
-  SUPABASE_URL:      "https://DEIN-PROJEKT.supabase.co",
-  SUPABASE_ANON_KEY: "DEIN-ANON-PUBLIC-KEY",
+  SUPABASE_URL:      "https://deulqlrjytprpmdjttky.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRldWxxbHJqeXRwcnBtZGp0dGt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMDg5NDAsImV4cCI6MjEwMzU4NDk0MH0.xSPXAX0gxnuAdHk6dkVh_HGCI1NgLHyKAiTYJqvS4HQ",
   ADMIN_EMAIL:       "michael.gaede@dsqv.de"
 };
