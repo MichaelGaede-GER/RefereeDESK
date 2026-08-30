@@ -1000,41 +1000,43 @@ function parseCourtTeams(s){
   if(seeds.length>=2){
     const i1=seeds[0].index,i2=seeds[1].index;
     const before=s.slice(0,i1).trim(); hs=seeds[0][1];
-    away=s.slice(i1+seeds[0][0].length,i2).trim(); as=seeds[1][1];
+    away=s.slice(i1+seeds[0][0].length,i2).trim().replace(/^[-–]\s*/,'').trim(); as=seeds[1][1];
     const cm=before.match(courtRe); if(cm){court=cm[1].trim();home=cm[2].trim();} else home=before;
   } else { const cm=s.match(courtRe); if(cm){court=cm[1].trim();home=cm[2].trim();} else home=s; }
   return {court,home,home_seed:hs,away_team:away,away_seed:as};
 }
 function isCourtSheet(text){
   const lines=text.split(/\r?\n/).map(l=>l.trim());
-  const courtHeaders=lines.filter(l=>l==='Court').length;
-  const posLines=lines.filter(l=>/^[A-Za-z]{1,4}\d+\s+\d+\s*-?\s*$/.test(l)).length;
-  return courtHeaders>=1 && posLines>=1;
+  const courtBlocks=lines.filter(l=>/^Court\b/.test(l)).length;
+  const posLines=lines.filter(l=>/^[A-Za-z]{1,4}\d+\s+\d+\b/.test(l)).length;
+  return courtBlocks>=1 && posLines>=1;
 }
 function parseCourtSheet(text){
   const lines=text.split(/\r?\n/).map(l=>l.trim());
-  let date=null,order=0; const rows=[]; const positions={};
-  const posLineRe=/^([A-Za-z]{1,4}\d+)\s+\d+\s*-?.*$/;
-  for(let i=0;i<lines.length;i++){
-    const line=lines[i]; let m;
-    if((m=line.match(/^Matches of\b.*?(\d{1,2}\.\d{1,2}\.\d{4})/))){ date=m[1]; continue; }
-    if(line!=='Court') continue;
-    const courtLine=lines[i+1]||''; const compTime=lines[i+2]||''; const dLine=lines[i+3]||'';
-    const ct=parseCourtTeams(courtLine);
-    const tm=compTime.match(/^(.*?)\s+(\d{1,2}:\d{2})\s*$/);
-    let comp=tm?tm[1].trim():compTime.trim(); const time=tm?tm[2]:'';
-    comp=comp.replace(/\s*-\s*$/,'').trim();
-    let d=date; const dm=dLine.match(/(\d{1,2}\.\d{1,2}\.\d{4})/); if(dm) d=dm[1];
-    const pos=[]; let j=i+4;
-    for(;j<lines.length;j++){ const L=lines[j];
-      if(L==='-'||L==='Court'||/^Matches of/.test(L)||/Squash League Planner/.test(L)||/^Page \d/.test(L)) break;
-      const pm=L.match(posLineRe); if(pm) pos.push(pm[1]);
+  let globalDate=null;
+  lines.forEach(l=>{ const m=l.match(/^Matches of\b.*?(\d{1,2}\.\d{1,2}\.\d{4})/); if(m && !globalDate) globalDate=m[1]; });
+  const starts=[]; lines.forEach((l,i)=>{ if(/^Court\b/.test(l)) starts.push(i); });
+  const rows=[]; const positions={}; let order=0;
+  const posRe=/^([A-Za-z]{1,4}\d+)\s+\d+\b/;
+  for(let b=0;b<starts.length;b++){
+    const block=lines.slice(starts[b], b+1<starts.length?starts[b+1]:lines.length);
+    let comp='',time='',date=null,teams=null; const pos=[];
+    for(const L of block){
+      if(!L) continue;
+      if(posRe.test(L)){ pos.push(L.match(posRe)[1]); continue; }   // position line
+      if(!time){ const tm=L.match(/(\d{1,2}:\d{2})/); if(tm && /[A-Za-z]/.test(L)){
+        time=tm[1];
+        comp=L.replace(/^Court\b\s*/,'').replace(/\s*\d{1,2}:\d{2}.*$/,'').replace(/\s*-\s*$/,'').trim();
+      }}
+      if(!date){ const dm=L.match(/(\d{1,2}\.\d{1,2}\.\d{4})/); if(dm && !/^Matches of/.test(L)) date=dm[1]; }
+      if(!teams && /\[[\d/]+\]/.test(L)) teams=L;   // the court+teams line (has seed brackets)
     }
+    if(date) globalDate=date; const d=date||globalDate;
+    const ct= teams? parseCourtTeams(teams) : {court:'',home:'',home_seed:'',away_team:'',away_seed:''};
     if(comp && pos.length){ if(!positions[comp]||positions[comp].length<pos.length) positions[comp]=pos; }
-    if(ct.court || ct.home || ct.away_team){
+    if(ct.court||ct.home||ct.away_team){
       rows.push({match_date:d,time,event:comp,grp:'',court:ct.court,venue:'',home_team:ct.home,home_seed:ct.home_seed,away_team:ct.away_team,away_seed:ct.away_seed,sort_order:order++});
     }
-    i=j-1;
   }
   return {rows,positions};
 }
