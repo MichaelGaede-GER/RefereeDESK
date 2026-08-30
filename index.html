@@ -678,7 +678,7 @@
    NICHT aus den Einstellungen. So funktioniert der geteilte Link
    auf jedem Gerät und niemand kann den Zugang in der App ändern.
    ------------------------------------------------------------ */
-const APP_VERSION = 'v1.7.0';
+const APP_VERSION = 'v1.7.1';
 
 const RD_CONFIG = (typeof window!=='undefined' && window.RD_CONFIG) ? window.RD_CONFIG : {};
 function cfgVal(v){ v=(v||'').trim(); return /^(DEIN|YOUR)/i.test(v) ? '' : v; }   // Platzhalter ignorieren
@@ -993,7 +993,8 @@ function parseSchedule(text){
 /* ---- second format: detailed "court sheet" export (with positions WS1.., MS1..) ---- */
 function parseCourtTeams(s){
   const seedRe=/\[([\d/]+)\]/g; const seeds=[...s.matchAll(seedRe)];
-  const courtRe=/^((?:GC|C\d+|\d+)(?:\s*&\s*(?:GC|C\d+|\d+))*)\s+(.*)$/i;
+  // court token(s): 1-4 uppercase letters + optional digits, joined by & (also truncated combos like "SBC1&SB")
+  const courtRe=/^([A-Z]{1,4}\d*(?:\s*&\s*[A-Z]{0,4}\d*)*)\s+(.+)$/;
   let court='',home='',hs='',away='',as='';
   if(seeds.length>=2){
     const i1=seeds[0].index,i2=seeds[1].index;
@@ -1003,10 +1004,13 @@ function parseCourtTeams(s){
   } else { const cm=s.match(courtRe); if(cm){court=cm[1].trim();home=cm[2].trim();} else home=s; }
   return {court,home,home_seed:hs,away_team:away,away_seed:as};
 }
+// position line: LABEL (letters, optional digits) + order number + ( "-" | "N: player..." )
+// matches BS1, BS2, GS, GS1, GS2, WS1, MS1 …  but NOT date lines like "Do 07.05.2026"
+const POS_RE = /^([A-Za-z]{1,4}\d*)\s+\d+\s+(?:-|\d+\s*:)/;
 function isCourtSheet(text){
   const lines=text.split(/\r?\n/).map(l=>l.trim());
   const courtBlocks=lines.filter(l=>/^Court\b/.test(l)).length;
-  const posLines=lines.filter(l=>/^[A-Za-z]{1,4}\d+\s+\d+\b/.test(l)).length;
+  const posLines=lines.filter(l=>POS_RE.test(l)).length;
   return courtBlocks>=1 && posLines>=1;
 }
 function parseCourtSheet(text){
@@ -1015,12 +1019,12 @@ function parseCourtSheet(text){
   lines.forEach(l=>{ const m=l.match(/^Matches of\b.*?(\d{1,2}\.\d{1,2}\.\d{4})/); if(m && !globalDate) globalDate=m[1]; });
   const starts=[]; lines.forEach((l,i)=>{ if(/^Court\b/.test(l)) starts.push(i); });
   const rows=[]; const positions={}; let order=0;
-  const posRe=/^([A-Za-z]{1,4}\d+)\s+\d+\b/;
-  // "WS1 1 1: Alison Thomson - 1: Sofia Aveiro Pita" -> label, home player, away player
-  const playerRe=/^([A-Za-z]{1,4}\d+)\s+\d+\s+\d+:\s*(.+?)\s+-\s+\d+:\s*(.+?)\s*$/;
+  const posRe=POS_RE;
+  // "BS1 1 1: Rafael - 1: Tom"  /  "GS 3 1: Nerea - 1: Emma"  -> label, home player, away player
+  const playerRe=/^([A-Za-z]{1,4}\d*)\s+\d+\s+\d+\s*:\s*(.+?)\s+-\s+\d+\s*:\s*(.+?)\s*$/;
   for(let b=0;b<starts.length;b++){
     const block=lines.slice(starts[b], b+1<starts.length?starts[b+1]:lines.length);
-    let comp='',time='',date=null,teams=null; const pos=[]; const players={};
+    let comp='',grp='',time='',date=null,teams=null; const pos=[]; const players={};
     for(const L of block){
       if(!L) continue;
       if(posRe.test(L)){
@@ -1031,6 +1035,8 @@ function parseCourtSheet(text){
       if(!time){ const tm=L.match(/(\d{1,2}:\d{2})/); if(tm && /[A-Za-z]/.test(L)){
         time=tm[1];
         comp=L.replace(/^Court\b\s*/,'').replace(/\s*\d{1,2}:\d{2}.*$/,'').replace(/\s*-\s*$/,'').trim();
+        const gm=comp.match(/^(.*?)\s*-\s*(Group\s+\S+)$/i);   // "… Team - Group A" -> comp + group
+        if(gm){ comp=gm[1].trim(); grp=gm[2].trim(); }
       }}
       if(!date){ const dm=L.match(/(\d{1,2}\.\d{1,2}\.\d{4})/); if(dm && !/^Matches of/.test(L)) date=dm[1]; }
       if(!teams && /\[[\d/]+\]/.test(L)) teams=L;   // the court+teams line (has seed brackets)
@@ -1039,7 +1045,7 @@ function parseCourtSheet(text){
     const ct= teams? parseCourtTeams(teams) : {court:'',home:'',home_seed:'',away_team:'',away_seed:''};
     if(comp && pos.length){ if(!positions[comp]||positions[comp].length<pos.length) positions[comp]=pos; }
     if(ct.court||ct.home||ct.away_team){
-      const row={match_date:d,time,event:comp,grp:'',court:ct.court,venue:'',home_team:ct.home,home_seed:ct.home_seed,away_team:ct.away_team,away_seed:ct.away_seed,sort_order:order++};
+      const row={match_date:d,time,event:comp,grp,court:ct.court,venue:'',home_team:ct.home,home_seed:ct.home_seed,away_team:ct.away_team,away_seed:ct.away_seed,sort_order:order++};
       if(Object.keys(players).length) row.players=JSON.stringify(players);
       rows.push(row);
     }
