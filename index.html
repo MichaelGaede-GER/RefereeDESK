@@ -33,6 +33,7 @@
   .brand .ball{width:16px;height:16px;border-radius:50%;background:var(--ink);position:relative;flex:0 0 auto}
   .brand .ball::after{content:"";position:absolute;inset:0;margin:auto;width:5px;height:5px;border-radius:50%;background:var(--red)}
   .brand b{font-family:var(--disp);font-weight:800;font-size:17px;letter-spacing:-.02em}
+  .ver{font-family:var(--body);font-weight:600;font-size:10.5px;color:var(--muted);letter-spacing:0;vertical-align:2px}
   .brand span{color:var(--muted);font-size:12.5px;display:block;margin-top:-3px;letter-spacing:.02em}
   nav.tabs{display:flex;gap:2px;background:var(--line-soft);padding:3px;border-radius:9px}
   nav.tabs button{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:7px;font-weight:600}
@@ -190,6 +191,7 @@
   .userchip{display:flex;align-items:center;gap:9px;white-space:nowrap}
   .userchip .who{font-size:12.5px;color:var(--muted);max-width:280px;overflow:hidden;text-overflow:ellipsis}
   .role-tag{font-size:10px;font-weight:700;color:#fff;background:var(--go);border-radius:999px;padding:1px 7px;margin-left:5px}
+  .role-tag.warn{background:var(--red)}
   .gate{position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,#f3f4f6,#e7e9ee);display:flex;align-items:center;justify-content:center;padding:20px}
   .gate-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 60px rgba(20,22,26,.18);width:100%;max-width:380px;padding:26px 26px 22px}
   .gate-card h2{font-family:var(--disp);font-weight:800;font-size:24px;text-align:center;margin-top:6px}
@@ -323,7 +325,7 @@
   <div class="inner">
     <div class="brand">
       <div class="ball"></div>
-      <div><b>Referee Desk</b><span>Referee scheduling</span></div>
+      <div><b>Referee Desk <span class="ver" id="appVer"></span></b><span>Referee scheduling</span></div>
     </div>
     <nav class="tabs" id="tabs">
       <button data-view="plan" class="active">Assign</button>
@@ -345,7 +347,7 @@
 <div class="gate" id="gate" style="display:none">
   <div class="gate-card">
     <div class="brand" style="justify-content:center;margin-bottom:6px">
-      <div class="ball"></div><div><b>Referee Desk</b><span>Referee scheduling</span></div>
+      <div class="ball"></div><div><b>Referee Desk <span class="ver" id="gateVer"></span></b><span>Referee scheduling</span></div>
     </div>
     <h2 id="gateTitle">Sign in</h2>
     <p class="sub" id="gateSub">Access for registered users only.</p>
@@ -690,6 +692,8 @@
    Bleibt das leer, nutzt die App den in den Einstellungen gespeicherten
    Zugang bzw. den lokalen Speicher.
    ------------------------------------------------------------ */
+const APP_VERSION = 'v1.6.1';
+
 const EMBEDDED_SUPABASE = { url:'', key:'' };
 
 /* Vollzugriff nur für diese E-Mail (muss der Supabase-Login-Adresse entsprechen). */
@@ -747,15 +751,15 @@ const store = {
   // --- Stammdaten: Events + alle Schiedsrichter (immer geladen) ---
   async loadBase(){
     if(state.backend==='supabase' && state.supa){
-      const [e,r,er] = await Promise.all([
-        state.supa.from('events').select('*').order('created_at'),
-        state.supa.from('referees').select('*').order('name'),
-        state.supa.from('event_referees').select('*')
-      ]);
-      if(e.error||r.error||er.error) throw (e.error||r.error||er.error);
-      state.events = e.data||[];
+      // jede Abfrage einzeln — eine fehlende/fehlerhafte darf die Referee-Liste nicht leeren
+      const e  = await state.supa.from('events').select('*').order('created_at');
+      const r  = await state.supa.from('referees').select('*').order('name');
+      const er = await state.supa.from('event_referees').select('*');
+      if(r.error){ console.error('Referee Desk: referees load failed', r.error); throw r.error; }
+      state.events = e.error ? (console.error('events load failed', e.error), []) : (e.data||[]);
       state.referees = r.data||[];
-      const en={}; (er.data||[]).forEach(x=>{ (en[x.event_id]=en[x.event_id]||[]).push(x.referee_id); });
+      const en={}; if(!er.error){ (er.data||[]).forEach(x=>{ (en[x.event_id]=en[x.event_id]||[]).push(x.referee_id); }); }
+      else console.error('event_referees load failed', er.error);
       state.enrollment = en;
     } else {
       state.events     = JSON.parse(localStorage.getItem(LS.events)||'[]');
@@ -1868,13 +1872,26 @@ function roleLabel(r){ return {admin:'Admin', head:'Head referee', referee:'Refe
 function updateUserChip(){
   const chip=$('#userChip'); const authed = state.backend==='supabase' && state.user;
   chip.style.display = authed ? 'flex':'none';
-  if(authed) $('#userEmail').innerHTML = `${esc(state.user.email||'signed in')} <span class="role-tag">${esc(roleLabel(currentRole()))}</span>`;
+  if(authed){
+    const role=currentRole();
+    $('#userEmail').innerHTML = `${esc(state.user.email||'signed in')} <span class="role-tag${role==='viewer'?' warn':''}">${esc(roleLabel(role))}</span>`;
+    if(role==='viewer' && !VIEW_ONLY){
+      const emails=state.referees.map(r=>(r.email||'').trim().toLowerCase()).filter(Boolean);
+      const mine=(state.user.email||'').trim().toLowerCase();
+      console.warn('Referee Desk: signed in as "'+(state.user.email||'')+'" → no referee row matches this exact email. '+
+        'Referees loaded: '+state.referees.length+'. Emails on file: '+JSON.stringify(emails));
+      $('#userEmail').title = state.referees.length===0
+        ? 'No referees could be loaded (check the "read all" policy / that the SQL ran).'
+        : 'This login email ('+mine+') is not on any referee record. Ask the admin to set it exactly on your entry.';
+    } else { $('#userEmail').title=''; }
+  }
   // Konto-Karte in den Einstellungen
   const card=$('#accountCard');
   if(state.backend==='supabase'){
     card.style.display='block';
     $('#accountRow').innerHTML = state.user
       ? `<span class="em">${esc(state.user.email||'signed in')}</span>
+         <span class="role-tag${currentRole()==='viewer'?' warn':''}">${esc(roleLabel(currentRole()))}</span>
          <a class="btn ghost sm" href="${esc(dashUsersUrl())}" target="_blank" rel="noopener">Benutzer verwalten</a>
          <button class="btn ghost sm" id="btnSignOut2">Sign out</button>`
       : `<span class="empty-note">Not signed in.</span>`;
@@ -2188,6 +2205,7 @@ document.addEventListener('click',e=>{ if(e.target && e.target.id==='btnSignOut2
    BOOT
    ============================================================ */
 (async function init(){
+  { const v=$('#appVer'); if(v) v.textContent=APP_VERSION; const gv=$('#gateVer'); if(gv) gv.textContent=APP_VERSION; document.title='Referee Desk '+APP_VERSION+' · Squash'; }
   if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const saved=loadCfg();
   const hasEmbedded = !!(EMBEDDED_SUPABASE.url && EMBEDDED_SUPABASE.key);
