@@ -85,8 +85,14 @@
   .addref.sm{padding:2px 9px;font-size:13px;line-height:1.3}
   /* position rows in the assign card */
   .poslist{padding:4px 13px 13px;display:flex;flex-direction:column;gap:6px}
-  .posrow{display:flex;align-items:center;gap:9px;min-height:30px}
-  .poslbl{font-family:var(--disp);font-weight:800;font-size:12px;color:#fff;background:var(--ink);border-radius:6px;padding:2px 8px;min-width:34px;text-align:center;flex:0 0 auto}
+  .posrow{display:flex;align-items:flex-start;gap:9px;min-height:30px}
+  .poslbl{font-family:var(--disp);font-weight:800;font-size:12px;color:#fff;background:var(--ink);border-radius:6px;padding:2px 8px;min-width:34px;text-align:center;flex:0 0 auto;margin-top:2px}
+  .posmid{flex:1;display:flex;flex-direction:column;gap:3px}
+  .posplayers{font-size:12px;color:var(--ink);font-weight:500}
+  .posplayers .v{color:var(--muted);font-weight:400;font-size:11px}
+  .bref .posline .plnames{color:var(--muted);font-weight:500;font-size:11px;margin-right:4px}
+  .cp-cell .sr .rn .cp-players{font-weight:500;color:var(--muted);font-size:10px;margin:0 0 3px 0}
+  .pb-pos .plnames{color:#555;font-weight:400}
   .posrefs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:1}
   .menu-pos{font-size:12px;color:var(--muted);padding:2px 2px 6px}
   .menu-pos b{color:var(--ink)}
@@ -1018,12 +1024,18 @@ function parseCourtSheet(text){
   const starts=[]; lines.forEach((l,i)=>{ if(/^Court\b/.test(l)) starts.push(i); });
   const rows=[]; const positions={}; let order=0;
   const posRe=/^([A-Za-z]{1,4}\d+)\s+\d+\b/;
+  // "WS1 1 1: Alison Thomson - 1: Sofia Aveiro Pita" -> label, home player, away player
+  const playerRe=/^([A-Za-z]{1,4}\d+)\s+\d+\s+\d+:\s*(.+?)\s+-\s+\d+:\s*(.+?)\s*$/;
   for(let b=0;b<starts.length;b++){
     const block=lines.slice(starts[b], b+1<starts.length?starts[b+1]:lines.length);
-    let comp='',time='',date=null,teams=null; const pos=[];
+    let comp='',time='',date=null,teams=null; const pos=[]; const players={};
     for(const L of block){
       if(!L) continue;
-      if(posRe.test(L)){ pos.push(L.match(posRe)[1]); continue; }   // position line
+      if(posRe.test(L)){
+        const lbl=L.match(posRe)[1]; pos.push(lbl);
+        const pm=L.match(playerRe); if(pm){ players[lbl]={home:pm[2].trim(), away:pm[3].trim()}; }
+        continue;
+      }
       if(!time){ const tm=L.match(/(\d{1,2}:\d{2})/); if(tm && /[A-Za-z]/.test(L)){
         time=tm[1];
         comp=L.replace(/^Court\b\s*/,'').replace(/\s*\d{1,2}:\d{2}.*$/,'').replace(/\s*-\s*$/,'').trim();
@@ -1035,7 +1047,9 @@ function parseCourtSheet(text){
     const ct= teams? parseCourtTeams(teams) : {court:'',home:'',home_seed:'',away_team:'',away_seed:''};
     if(comp && pos.length){ if(!positions[comp]||positions[comp].length<pos.length) positions[comp]=pos; }
     if(ct.court||ct.home||ct.away_team){
-      rows.push({match_date:d,time,event:comp,grp:'',court:ct.court,venue:'',home_team:ct.home,home_seed:ct.home_seed,away_team:ct.away_team,away_seed:ct.away_seed,sort_order:order++});
+      const row={match_date:d,time,event:comp,grp:'',court:ct.court,venue:'',home_team:ct.home,home_seed:ct.home_seed,away_team:ct.away_team,away_seed:ct.away_seed,sort_order:order++};
+      if(Object.keys(players).length) row.players=JSON.stringify(players);
+      rows.push(row);
     }
   }
   return {rows,positions};
@@ -1073,6 +1087,8 @@ function refsForPosition(matchId,pos){ return asgList(matchId).filter(a=>(a.posi
 function eventPositions(){ const e=curEventObj(); if(!e) return {}; try{ return JSON.parse(e.positions||'{}'); }catch{ return {}; } }
 function categoriesInEvent(){ return [...new Set(state.matches.map(m=>m.event||'').filter(Boolean))]; }
 function positionsForMatch(m){ const cfg=eventPositions(); return (cfg[m.event||'']||[]).filter(Boolean); }
+function playersForMatch(m){ try{ return JSON.parse(m.players||'{}'); }catch{ return {}; } }
+function playersForPosition(m,pos){ const p=playersForMatch(m)[pos]; return (p&&(p.home||p.away))?p:null; }
 
 // which matches (in same date+time) a referee is assigned to (any position)
 function busyMap(date,time){
@@ -1133,7 +1149,9 @@ function matchCard(m){
       const chips=rids.map(rid=>`<span class="refchip">${esc(refName(rid))}${editable?`<button data-unassign="${m.id}|${rid}|${esc(pos)}" title="Remove">×</button>`:''}</span>`).join('');
       const none=rids.length?'':`<span class="none-ref">–</span>`;
       const add=editable?`<button class="addref sm" data-pick="${m.id}" data-pos="${esc(pos)}">+</button>`:'';
-      return `<div class="posrow"><span class="poslbl">${esc(pos)}</span><div class="posrefs">${chips}${none}${add}</div></div>`;
+      const pl=playersForPosition(m,pos);
+      const players=pl?`<div class="posplayers">${esc(pl.home||'?')} <span class="v">vs</span> ${esc(pl.away||'?')}</div>`:'';
+      return `<div class="posrow"><span class="poslbl">${esc(pos)}</span><div class="posmid">${players}<div class="posrefs">${chips}${none}${add}</div></div></div>`;
     }).join('') + `</div>`;
   } else {
     const rids=refsForPosition(m.id,'');
@@ -1187,7 +1205,9 @@ function openPicker(matchId, anchorBtn, position=''){
   closePicker();
   pickerMatchId=matchId; pickerPos=position;
   const menu=document.createElement('div'); menu.className='menu'; menu.id='__menu';
-  const head = position?`<div class="menu-pos">Position <b>${esc(position)}</b></div>`:'';
+  const pm = position ? (state.matches.find(x=>x.id===matchId)) : null;
+  const pl = pm ? playersForPosition(pm, position) : null;
+  const head = position?`<div class="menu-pos">Position <b>${esc(position)}</b>${pl?` · ${esc(pl.home||'?')} vs ${esc(pl.away||'?')}`:''}</div>`:'';
   menu.innerHTML = `<div class="mh">${head}<input type="text" id="__pickerSearch" placeholder="Search referee…" autocomplete="off"></div>
     <div id="__pickerList">${pickerBody(matchId,position)}</div>`;
   document.body.appendChild(menu);
@@ -1292,7 +1312,9 @@ function renderBoard(){
       if(positions.length){
         refs = positions.map(pos=>{
           const rids=refsForPosition(m.id,pos);
-          return `<div class="posline"><span class="pl">${esc(pos)}</span>${rids.length?rids.map(tok).join(''):`<span class="none">–</span>`}</div>`;
+          const pl=playersForPosition(m,pos);
+          const players=pl?`<span class="plnames">${esc(pl.home||'?')} vs ${esc(pl.away||'?')}</span>`:'';
+          return `<div class="posline"><span class="pl">${esc(pos)}</span>${players}${rids.length?rids.map(tok).join(''):`<span class="none">–</span>`}</div>`;
         }).join('');
       } else {
         const rids=refsForPosition(m.id,'');
@@ -1333,7 +1355,9 @@ function buildPrintDoc(){
         if(positions.length){
           sr = `<div class="pb-ref"><span class="lb">Referee:</span></div>` + positions.map(pos=>{
             const names=refsForPosition(m.id,pos).map(refName);
-            return `<div class="pb-pos"><span class="pp">${esc(pos)}</span> ${names.length?esc(names.join(', ')):'<span class="na">–</span>'}</div>`;
+            const pl=playersForPosition(m,pos);
+            const players=pl?`<span class="plnames"> ${esc(pl.home||'?')} vs ${esc(pl.away||'?')} —</span>`:'';
+            return `<div class="pb-pos"><span class="pp">${esc(pos)}</span>${players} ${names.length?esc(names.join(', ')):'<span class="na">–</span>'}</div>`;
           }).join('');
         } else {
           const names=refsForPosition(m.id,'').map(refName);
@@ -1377,7 +1401,9 @@ function courtCellHTML(m){
   if(positions.length){
     sr = `<div class="sr"><div class="lb">Referee:</div>` + positions.map(pos=>{
       const names=refsForPosition(m.id,pos).map(refName);
-      return `<div class="rn"><span class="pp">${esc(pos)}</span> ${names.length?esc(names.join(', ')):'<span class="none">–</span>'}</div>`;
+      const pl=playersForPosition(m,pos);
+      const players=pl?`<div class="cp-players">${esc(pl.home||'?')} vs ${esc(pl.away||'?')}</div>`:'';
+      return `<div class="rn"><span class="pp">${esc(pos)}</span> ${names.length?esc(names.join(', ')):'<span class="none">–</span>'}${players}</div>`;
     }).join('') + `</div>`;
   } else {
     const names=refsForPosition(m.id,'').map(refName);
@@ -1654,6 +1680,7 @@ create table if not exists matches (
   home_seed  text,
   away_team  text,
   away_seed  text,
+  players    text default '{}',      -- JSON: { "WS1": {"home":"..","away":".."}, ... }
   sort_order int default 0,
   created_at timestamptz default now()
 );
@@ -1680,6 +1707,7 @@ end $$;
 alter table matches   add column if not exists event_id uuid references events(id) on delete cascade;
 alter table matches   alter column home_seed type text using home_seed::text;
 alter table matches   alter column away_seed type text using away_seed::text;
+alter table matches   add column if not exists players text default '{}';
 alter table referees  add column if not exists location text default '';
 alter table referees  add column if not exists level    text default '';
 alter table referees  add column if not exists phone    text default '';
@@ -2018,7 +2046,7 @@ $('#btnImport').addEventListener('click',async ()=>{
   const rows=state.parsed.map(r=>({
     match_date: r.match_date||date||null, time:r.time||'', event:r.event||'', grp:r.grp||'',
     court:r.court||'', venue:r.venue||'', home_team:r.home_team||'', home_seed:r.home_seed||null,
-    away_team:r.away_team||'', away_seed:r.away_seed||null, sort_order:r.sort_order??0
+    away_team:r.away_team||'', away_seed:r.away_seed||null, players:r.players||'', sort_order:r.sort_order??0
   }));
   try{
     if($('#impReplace').checked){
