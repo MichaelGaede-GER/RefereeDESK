@@ -615,21 +615,8 @@
       <div class="card">
         <div class="ch"><h3>Data storage</h3><span class="hint" id="storeMode"></span></div>
         <div class="cb">
-          <label class="fld"><span>Storage location</span>
-            <select id="backendSel">
-              <option value="local">Local (this browser only)</option>
-              <option value="supabase">Supabase (shared, recommended for the tournament)</option>
-            </select>
-          </label>
-          <div id="supaFields">
-            <div class="grid2">
-              <label class="fld"><span>Supabase Project URL</span><input type="url" id="supaUrl" placeholder="https://xxxx.supabase.co"></label>
-              <label class="fld"><span>Anon / Public Key</span><input type="password" id="supaKey" placeholder="eyJhbGciOi…"></label>
-            </div>
-            <p class="hint" style="margin-top:0">The anon key is meant for the client and is safe to expose, but it is stored locally in this browser – not in the GitHub repo. Additionally protect the tables via Supabase RLS policies (see schema).</p>
-          </div>
+          <p class="hint" id="storeInfo" style="margin-top:0"></p>
           <div class="row-inline" style="margin-top:6px">
-            <button class="btn" id="btnConnect">Save &amp; connect</button>
             <button class="btn ghost sm" id="btnShowSql">Show SQL schema</button>
             <span class="beacon" id="beacon2"><span class="led"></span><span id="beacon2Txt"></span></span>
           </div>
@@ -679,6 +666,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -686,18 +674,18 @@
    Referee Desk — Schiedsrichter-Einteilung (Single File)
    ============================================================ */
 /* ------------------------------------------------------------
-   EINGEBETTETER SUPABASE-ZUGANG (für den öffentlichen Teilen-Link)
-   Zum Veröffentlichen hier URL + Anon-Key eintragen und committen.
-   Der Anon-Key ist für Client-Nutzung gedacht (Schutz über RLS-Policies).
-   Bleibt das leer, nutzt die App den in den Einstellungen gespeicherten
-   Zugang bzw. den lokalen Speicher.
+   Zugangsdaten kommen aus der separaten config.js (auf GitHub),
+   NICHT aus den Einstellungen. So funktioniert der geteilte Link
+   auf jedem Gerät und niemand kann den Zugang in der App ändern.
    ------------------------------------------------------------ */
-const APP_VERSION = 'v1.6.1';
+const APP_VERSION = 'v1.7.0';
 
-const EMBEDDED_SUPABASE = { url:'', key:'' };
+const RD_CONFIG = (typeof window!=='undefined' && window.RD_CONFIG) ? window.RD_CONFIG : {};
+function cfgVal(v){ v=(v||'').trim(); return /^(DEIN|YOUR)/i.test(v) ? '' : v; }   // Platzhalter ignorieren
+const EMBEDDED_SUPABASE = { url: cfgVal(RD_CONFIG.SUPABASE_URL), key: cfgVal(RD_CONFIG.SUPABASE_ANON_KEY) };
 
 /* Vollzugriff nur für diese E-Mail (muss der Supabase-Login-Adresse entsprechen). */
-const ADMIN_EMAIL = 'michael.gaede@dsqv.de';
+const ADMIN_EMAIL = (cfgVal(RD_CONFIG.ADMIN_EMAIL) || 'michael.gaede@dsqv.de');
 
 /* Standardmäßig ist nur die BEARBEITUNG (App) durch Login geschützt; der
    geteilte Nur-Lese-Link (?view=1) bleibt offen, damit der Oberschiedsrichter
@@ -1478,7 +1466,7 @@ function openShare(){
   $('#sharePersonal').value='';
   $('#shareWarn').innerHTML = embedded
     ? 'The shared link reads live from Supabase — every change is visible to everyone immediately.'
-    : '⚠ For the link to show data on other devices, fill <b>EMBEDDED_SUPABASE</b> (URL + anon key) at the top of the code and commit it. Without it a foreign browser sees no data.';
+    : '⚠ For the link to show data on other devices, fill <b>config.js</b> in the GitHub repository with your Supabase URL and anon key, then commit. Without it a foreign browser sees no data.';
   $('#shareModal').classList.add('show');
 }
 
@@ -1796,14 +1784,17 @@ function setBeacon(){
   const b=$('#beacon'); b.className='beacon '+cls; $('#beaconTxt').textContent=label;
   const b2=$('#beacon2'); if(b2){ b2.className='beacon '+cls; $('#beacon2Txt').textContent=label; }
   $('#storeMode').textContent = label;
+  const si=$('#storeInfo');
+  if(si){
+    si.innerHTML = state.backend==='supabase'
+      ? `Connected to Supabase — configured in the <b>config.js</b> file in the GitHub repository. To change the project, edit <b>config.js</b> and commit; it cannot be changed here.${state.supaUrl?` <span style="color:var(--muted)">(${esc(state.supaUrl)})</span>`:''}`
+      : `Running in <b>local mode</b> (this browser only, no login). To use the shared Supabase backend, fill <b>config.js</b> in the repository with your project URL and anon key.`;
+  }
 }
 
 /* ============================================================
-   CONFIG / CONNECT
+   CONNECT (config comes from config.js only)
    ============================================================ */
-function loadCfg(){ try{ return JSON.parse(localStorage.getItem(LS.cfg)||'{}'); }catch{ return {}; } }
-function saveCfg(c){ localStorage.setItem(LS.cfg,JSON.stringify(c)); }
-
 async function connect(cfg,{silent=false}={}){
   if(cfg.backend==='supabase' && cfg.url && cfg.key){
     try{
@@ -2158,16 +2149,7 @@ $('#btnSavePositions').addEventListener('click',async ()=>{
   catch(err){ toast('Error: '+(err.message||err)); }
 });
 
-// settings: backend
-$('#backendSel').addEventListener('change',e=>{
-  $('#supaFields').style.display = e.target.value==='supabase'?'block':'none';
-});
-$('#btnConnect').addEventListener('click',async ()=>{
-  const backend=$('#backendSel').value;
-  const cfg={backend, url:$('#supaUrl').value.trim(), key:$('#supaKey').value.trim()};
-  saveCfg(cfg);
-  await connect(cfg);
-});
+// settings: SQL schema viewer (storage config now comes from config.js — no inputs here)
 $('#btnShowSql').addEventListener('click',()=>{
   const box=$('#sqlBox'); const show=box.style.display==='none';
   box.style.display=show?'block':'none'; $('#sqlText').textContent=SQL; $('#btnShowSql').textContent=show?'SQL-Schema ausblenden':'SQL-Schema anzeigen';
@@ -2207,16 +2189,10 @@ document.addEventListener('click',e=>{ if(e.target && e.target.id==='btnSignOut2
 (async function init(){
   { const v=$('#appVer'); if(v) v.textContent=APP_VERSION; const gv=$('#gateVer'); if(gv) gv.textContent=APP_VERSION; document.title='Referee Desk '+APP_VERSION+' · Squash'; }
   if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  const saved=loadCfg();
   const hasEmbedded = !!(EMBEDDED_SUPABASE.url && EMBEDDED_SUPABASE.key);
-  const cfg = hasEmbedded ? {backend:'supabase', url:EMBEDDED_SUPABASE.url, key:EMBEDDED_SUPABASE.key} : saved;
-
-  // settings fields reflect the current config
-  $('#backendSel').value = cfg.backend==='supabase'?'supabase':'local';
-  $('#supaFields').style.display = cfg.backend==='supabase'?'block':'none';
-  $('#supaUrl').value = saved.url||EMBEDDED_SUPABASE.url||'';
-  $('#supaKey').value = saved.key||EMBEDDED_SUPABASE.key||'';
-
+  const cfg = hasEmbedded
+    ? {backend:'supabase', url:EMBEDDED_SUPABASE.url, key:EMBEDDED_SUPABASE.key}
+    : {backend:'local'};
   await connect(cfg,{silent:true});   // handhabt Gate / Ansichtsmodus intern
 })();
 </script>
