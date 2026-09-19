@@ -478,7 +478,7 @@
       <div class="card">
         <div class="ch"><h3>Import schedule</h3></div>
         <div class="cb">
-          <p class="hint" style="margin-top:0">Upload a file from the tournament software (<b>.pdf</b> or <b>.txt</b>) or paste the text directly. Both the league-planner list and the detailed court sheet (with positions WS1…/MS1…) are recognised automatically — the court sheet also sets the positions for this event. Then review and import.</p>
+          <p class="hint" style="margin-top:0">Upload a file from the tournament software (<b>.pdf</b> or <b>.txt</b>) or paste the text directly. Three formats are recognised automatically: the league-planner list, the detailed court sheet (with positions WS1…/MS1… — this one also sets the positions for the event), and the ESF <b>court-schedule grid</b> (courts × times, team ties without players yet — PDF only, columns are read from the layout). Then review and import.</p>
           <div class="file-drop" id="fileDrop" style="margin:12px 0">
             <input type="file" id="fileInput" accept=".pdf,.txt,text/plain,application/pdf" style="display:none">
             <div><b>Choose file</b> · PDF or TXT — or paste text below</div>
@@ -1054,8 +1054,143 @@ function parseCourtSheet(text){
 }
 // auto-detect format; returns {rows, positions}
 function analyzeImport(text){
+  if(/^##ESFGRID##/.test(text)) return parseEsfGridText(text);   // ESF Club Championships court-schedule grid (PDF)
   if(isCourtSheet(text)) return parseCourtSheet(text);
   return { rows: parseSchedule(text), positions: {} };
+}
+
+/* ============================================================
+   THIRD FORMAT — ESF "Court schedule" grid  (Squash League Planner PDF)
+   ------------------------------------------------------------
+   A matrix layout: courts across the top, time bands down the side,
+   each cell = time + competition + Home [seed] vs Away [seed].
+   The Y-based text join loses the columns, so the columns are
+   reconstructed from the X coordinates inside extractPdf(); this
+   serialises them into a tagged text block that is parsed here.
+   No player positions in this format (team ties, players TBD).
+   ============================================================ */
+const _isTime = t => /^\d{1,2}:\d{2}$/.test(t);
+const _isVs   = t => /^vs\.?$/i.test(t);
+// a team line: has a country code "(POR)" — or ends in a seed and is clearly not a competition line
+const _isTeamLine = t => /\([A-Z]{2,4}\)/.test(t) || (/\[\d+(?:\/\d+)?\]$/.test((t||'').trim()) && !/Championship|RR\d|#\d/i.test(t));
+const _ESF_FOOTER = /tournamentsoftware|Squash League Planner|^Page\b|^ESF$|^Date$|^City, Country$|^Website$/i;
+const _pad2 = n => String(n).padStart(2,'0');
+const _ESF_MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,mär:3,mrz:3,mai:5,okt:10,dez:12};
+
+// competition string -> {event (category), grp (pool/group)}
+function splitCompEsf(c){
+  let s=(c||'').replace(/\s*RR\d+\s*#?\d*\s*$/i,'').trim();            // drop round-robin round "RR2 #6"
+  let grp='';
+  const m=s.match(/[-–]\s*(Pool\s+\S+)\s*$/i) || s.match(/\b(Group\s+\S+)\s*$/i);
+  if(m){ grp=m[1].trim(); s=s.slice(0,m.index).replace(/[-–]\s*$/,'').trim(); }
+  return {event:s, grp};
+}
+// cluster X centres, merging neighbours within tol
+function clusterXEsf(xs, tol){
+  const idx=xs.map((x,i)=>({x,i})).sort((a,b)=>a.x-b.x);
+  const cl=[]; let cur=null;
+  for(const {x,i} of idx){
+    if(cur && x-cur.max<=tol){ cur.xs.push(x); cur.members.push(i); cur.max=x; }
+    else { cur={xs:[x],members:[i],max:x}; cl.push(cur); }
+  }
+  return cl.map(c=>({center:c.xs.reduce((a,b)=>a+b,0)/c.xs.length, members:c.members}));
+}
+// event date from the header ("23 - 26 Sep 2026"); ignores the print-timestamp footer
+function metaDateEsf(items){
+  const byY={}; items.forEach(it=>{ const k=Math.round(it.y); (byY[k]=byY[k]||[]).push(it); });
+  const lines=Object.keys(byY).map(Number).sort((a,b)=>a-b)
+    .map(y=>byY[y].sort((a,b)=>a.x-b.x).map(i=>i.t).join(' ').replace(/\s+/g,' ').trim());
+  for(const t of lines){ if(_ESF_FOOTER.test(t)) continue;
+    const m=t.match(/\b(\d{1,2})\s*[-–]\s*\d{1,2}\s+([A-Za-zäöü]{3,})\.?\s+(\d{4})/);
+    if(m){ const mm=_ESF_MON[m[2].slice(0,3).toLowerCase()]; if(mm) return `${_pad2(m[1])}.${_pad2(mm)}.${m[3]}`; } }
+  for(const t of lines){ if(_ESF_FOOTER.test(t)||/\d{1,2}:\d{2}/.test(t)) continue;
+    const m=t.match(/\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b/);
+    if(m) return `${_pad2(m[1])}.${_pad2(+m[2])}.${m[3]}`; }
+  return '';
+}
+// items: [{t, x:centre, y:top-down}] for one page. Returns {date, rows:[…]} or null.
+function esfGridRows(rawItems){
+  const items=(rawItems||[]).map(i=>({t:(i.t||'').replace(/\s+/g,' ').trim(), x:i.x, y:i.y}))
+                            .filter(i=>i.t && !_ESF_FOOTER.test(i.t));
+  if(!items.length) return null;
+  const byY={}; items.forEach(it=>{ const k=Math.round(it.y); (byY[k]=byY[k]||[]).push(it); });
+  const rows=Object.keys(byY).map(Number).sort((a,b)=>a-b)
+    .map(y=>({y, toks:byY[y].sort((a,b)=>a.x-b.x)}));
+  const ti=rows.findIndex(r=>r.toks.length && r.toks.every(t=>_isTime(t.t)));   // first pure-times row
+  if(ti<1) return null;
+  const headerRow=rows[ti-1];
+  if(headerRow.toks.length<3) return null;                                      // need a court header row
+  // columns from the header tokens (merge split runs like "GC" + "10")
+  const cols=clusterXEsf(headerRow.toks.map(t=>t.x), 35).map(c=>({
+    center:c.center,
+    court:c.members.slice().sort((a,b)=>headerRow.toks[a].x-headerRow.toks[b].x)
+      .map(i=>headerRow.toks[i].t).join(' ').replace(/\s+/g,' ').trim(),
+    lines:[], cells:[]
+  }));
+  const pitch = cols.length>1 ? (cols[cols.length-1].center-cols[0].center)/(cols.length-1) : 90;
+  const maxd = Math.max(30, pitch*0.55);
+  const nearest = x => { let bi=-1,bd=1e9; cols.forEach((c,i)=>{const d=Math.abs(c.center-x); if(d<bd){bd=d;bi=i;}}); return bd<=maxd?bi:-1; };
+  // merge tokens per (row, column) into one logical line (robust to run-splitting)
+  for(let r=ti; r<rows.length; r++){
+    const bucket=cols.map(()=>[]);
+    for(const t of rows[r].toks){ const ci=nearest(t.x); if(ci>=0) bucket[ci].push(t); }
+    bucket.forEach((arr,ci)=>{ if(!arr.length) return;
+      const text=arr.sort((a,b)=>a.x-b.x).map(t=>t.t).join(' ').replace(/\s+/g,' ').trim();
+      if(text) cols[ci].lines.push({y:rows[r].y, text}); });
+  }
+  // per column: segment top→bottom into cells by time
+  cols.forEach(col=>{
+    col.lines.sort((a,b)=>a.y-b.y);
+    let cell=null; const flush=()=>{ if(cell && (cell.home||cell.away)) col.cells.push(cell); cell=null; };
+    for(const {text} of col.lines){
+      if(_isTime(text)){ flush(); cell={time:text, event:'', home:'', away:''}; continue; }
+      if(!cell || _isVs(text)) continue;
+      if(_isTeamLine(text)){ if(!cell.home) cell.home=text; else if(!cell.away) cell.away=text; continue; }
+      if(!cell.home){ cell.event = cell.event ? cell.event+' '+text : text; }
+    }
+    flush();
+  });
+  // flatten, order by time then court column
+  const date=metaDateEsf(items); const flat=[];
+  cols.forEach((col,ci)=>col.cells.forEach(c=>{
+    const {event,grp}=splitCompEsf(c.event);
+    flat.push({match_date:date, time:c.time, event, grp, court:col.court, home:c.home, away:c.away, _ci:ci});
+  }));
+  flat.sort((a,b)=>(a.time||'').localeCompare(b.time||'')||a._ci-b._ci);
+  flat.forEach(r=>delete r._ci);
+  return flat.length ? {date, rows:flat} : null;
+}
+// serialise resolved grid rows into the tagged text block that lands in the textarea
+function serializeEsf(rows){
+  let out='##ESFGRID##\n', cur=null;
+  for(const r of rows){
+    if(r.match_date && r.match_date!==cur){ out+='@DATE '+r.match_date+'\n'; cur=r.match_date; }
+    out+=`@ROW\n@TIME ${r.time||''}\n@COURT ${r.court||''}\n@COMP ${r.event||''}\n@POOL ${r.grp||''}\n@HOME ${r.home||''}\n@AWAY ${r.away||''}\n`;
+  }
+  return out;
+}
+// parse the tagged block back into schedule rows
+function parseEsfGridText(text){
+  const rows=[]; let cur=null, date='', order=0;
+  const push=()=>{ if(cur){ const h=splitSeed(cur.home||''), a=splitSeed(cur.away||'');
+    rows.push({ match_date:cur.date||date||null, time:cur.time||'', event:cur.event||'', grp:cur.grp||'',
+      court:cur.court||'', venue:'', home_team:h.text, home_seed:h.seed,
+      away_team:a.text, away_seed:a.seed, sort_order:order++ }); } cur=null; };
+  for(const raw of text.split(/\r?\n/)){
+    const line=raw.replace(/\s+$/,''); const t=line.trim(); if(!t || t==='##ESFGRID##') continue;
+    let m;
+    if((m=t.match(/^@DATE\s?(.*)$/))){ date=m[1].trim(); continue; }
+    if(t==='@ROW'){ push(); cur={date}; continue; }
+    if(!cur) continue;
+    if((m=line.match(/^@TIME\s?(.*)$/)))  { cur.time =m[1].trim(); continue; }
+    if((m=line.match(/^@COURT\s?(.*)$/))) { cur.court=m[1].trim(); continue; }
+    if((m=line.match(/^@COMP\s?(.*)$/)))  { cur.event=m[1].trim(); continue; }
+    if((m=line.match(/^@POOL\s?(.*)$/)))  { cur.grp  =m[1].trim(); continue; }
+    if((m=line.match(/^@HOME\s?(.*)$/)))  { cur.home =m[1].trim(); continue; }
+    if((m=line.match(/^@AWAY\s?(.*)$/)))  { cur.away =m[1].trim(); continue; }
+  }
+  push();
+  return { rows, positions:{} };
 }
 
 /* ============================================================
@@ -1482,10 +1617,19 @@ function openShare(){
 async function extractPdf(file){
   const buf=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-  let out='';
+  let out='';          // flat, Y-joined text (list / court-sheet formats)
+  let grid=[];         // resolved rows if this is an ESF court-schedule grid
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p); const tc=await page.getTextContent();
-    // rebuild lines by Y position
+    // (a) try the ESF grid via item X coordinates (columns = courts)
+    const items=tc.items.filter(it=>it.str && it.str.trim()).map(it=>({
+      t:it.str.replace(/\s+/g,' ').trim(),
+      x:(it.transform[4])+(it.width||0)/2,   // horizontal centre
+      y:-(it.transform[5])                    // top-down (pdf origin is bottom-left)
+    }));
+    const g=esfGridRows(items);
+    if(g && g.rows.length) grid=grid.concat(g.rows);
+    // (b) flat line rebuild by Y (fallback / other formats)
     const rows={};
     tc.items.forEach(it=>{ const y=Math.round(it.transform[5]); (rows[y]=rows[y]||[]).push(it); });
     Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y=>{
@@ -1493,7 +1637,7 @@ async function extractPdf(file){
       if(line) out+=line+'\n';
     });
   }
-  return out;
+  return grid.length ? serializeEsf(grid) : out;
 }
 function renderPreview(){
   const rows=state.parsed;
