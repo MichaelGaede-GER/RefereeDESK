@@ -572,7 +572,9 @@
                     <option value="">— none (read-only) —</option>
                     <option value="referee">Referee</option>
                     <option value="head">Head referee (may assign)</option>
+                    <option value="admin">Admin (full access)</option>
                   </select>
+                  <span class="hint">Admin = full access (settings, import, events). Head referee may only assign. The email above must be the person's Supabase login.</span>
                 </label>
               </div>
               <div class="grid2">
@@ -684,8 +686,23 @@ const RD_CONFIG = (typeof window!=='undefined' && window.RD_CONFIG) ? window.RD_
 function cfgVal(v){ v=(v||'').trim(); return /^(DEIN|YOUR)/i.test(v) ? '' : v; }   // Platzhalter ignorieren
 const EMBEDDED_SUPABASE = { url: cfgVal(RD_CONFIG.SUPABASE_URL), key: cfgVal(RD_CONFIG.SUPABASE_ANON_KEY) };
 
-/* Vollzugriff nur für diese E-Mail (muss der Supabase-Login-Adresse entsprechen). */
-const ADMIN_EMAIL = (cfgVal(RD_CONFIG.ADMIN_EMAIL) || 'michael.gaede@dsqv.de');
+/* Vollzugriff ("Admin"). Mehrere Admins sind möglich – auf zwei Wegen:
+   1) fest über config.js als Liste:
+        ADMIN_EMAILS: "a@verein.de, b@verein.de"   (Komma/Semikolon/Leerzeichen)
+        oder als Array: ADMIN_EMAILS: ["a@verein.de","b@verein.de"]
+      Die alte Einzel-Variante ADMIN_EMAIL wird weiterhin unterstützt.
+   2) im laufenden Betrieb ohne Code: Settings → Schiedsrichter-Datenbank →
+      Rolle "Admin (full access)".
+   Jede Adresse muss exakt der Supabase-Login-Adresse der Person entsprechen. */
+function _emailList(v){ return Array.isArray(v) ? v : String(v||'').split(/[,;\s]+/); }
+const ADMIN_EMAILS = (()=>{
+  const list=[ ..._emailList(RD_CONFIG.ADMIN_EMAILS), RD_CONFIG.ADMIN_EMAIL ]
+    .map(e=>cfgVal(e).toLowerCase()).filter(Boolean);
+  if(!list.length) list.push('michael.gaede@dsqv.de');     // Owner-Fallback, falls nichts konfiguriert
+  return [...new Set(list)];
+})();
+const ADMIN_EMAIL = ADMIN_EMAILS[0];                        // primärer Owner (für Links/Hinweise)
+function isAdminEmail(email){ return ADMIN_EMAILS.includes((email||'').trim().toLowerCase()); }
 
 /* Standardmäßig ist nur die BEARBEITUNG (App) durch Login geschützt; der
    geteilte Nur-Lese-Link (?view=1) bleibt offen, damit der Oberschiedsrichter
@@ -1711,7 +1728,9 @@ function renderRefs(){
   if(q) list=list.filter(r=>[r.name,r.location,r.level,r.email,r.phone].some(v=>(v||'').toLowerCase().includes(q)));
   $('#refList').innerHTML = list.length ? list.map(r=>{
     const sub=[r.location, r.phone, r.email].filter(Boolean).join(' · ');
-    const roleBadge = r.role==='head' ? `<span class="role head">Head ref</span>` : (r.role==='referee'?`<span class="role">Referee</span>`:'');
+    const roleBadge = r.role==='admin' ? `<span class="role head">Admin</span>`
+      : r.role==='head' ? `<span class="role head">Head ref</span>`
+      : (r.role==='referee'?`<span class="role">Referee</span>`:'');
     return `<div class="dbrow">
       ${avatar(r,'sm')}
       <div class="info"><div class="nm">${esc(r.name)}${roleBadge}</div>${sub?`<div class="sub">${esc(sub)}</div>`:''}</div>
@@ -1855,21 +1874,38 @@ alter table referees  add column if not exists level    text default '';
 alter table referees  add column if not exists phone    text default '';
 alter table referees  add column if not exists email    text default '';
 alter table referees  add column if not exists photo    text default '';
-alter table referees  add column if not exists role     text default '';   -- '', 'referee', 'head'
+alter table referees  add column if not exists role     text default '';   -- '', 'referee', 'head', 'admin'
 
 -- ============================================================
 -- Row Level Security with roles
---   admin (ADMIN_EMAIL)                -> full write on everything
+--   admin -> full write on everything. Two ways to be admin:
+--       (a) email in the OWNER LIST inside app_is_admin() below
+--           (keep it in sync with ADMIN_EMAILS in config.js), or
+--       (b) a referee record with role='admin' (set in the app,
+--           Settings -> Referee database -> Role "Admin").
 --   head referee (referees.role='head') -> may write assignments only
---   everyone signed in / anon          -> read only
+--   everyone signed in / anon           -> read only
 -- READ stays open so the shared read-only link keeps working.
--- IMPORTANT: keep this admin email identical to ADMIN_EMAIL in the HTML.
 -- ============================================================
 alter table events         enable row level security;
 alter table referees       enable row level security;
 alter table event_referees enable row level security;
 alter table matches        enable row level security;
 alter table assignments    enable row level security;
+
+-- who counts as an app admin: owner list OR a referee with role='admin'.
+-- SECURITY DEFINER lets the inner lookup read referees without tripping RLS.
+create or replace function app_is_admin() returns boolean
+language sql stable security definer set search_path = public as $fn$
+  select
+    lower(trim(coalesce(auth.jwt()->>'email',''))) in (
+      'michael.gaede@dsqv.de'            -- OWNER LIST: add more admin emails here, comma-separated
+    )
+    or lower(trim(coalesce(auth.jwt()->>'email',''))) in (
+      select lower(trim(email)) from referees
+      where role = 'admin' and coalesce(trim(email),'') <> ''
+    );
+$fn$;
 
 -- remove older policies (any version)
 do $$
@@ -1893,22 +1929,21 @@ declare t text;
 begin
   foreach t in array array['events','referees','event_referees','matches'] loop
     execute format($f$create policy "admin write" on %I for all to authenticated
-      using (lower(trim(auth.jwt()->>'email')) = 'michael.gaede@dsqv.de')
-      with check (lower(trim(auth.jwt()->>'email')) = 'michael.gaede@dsqv.de')$f$, t);
+      using (app_is_admin()) with check (app_is_admin())$f$, t);
   end loop;
 end $$;
 
 -- assignments: admin OR a head referee (matched by their login email)
 create policy "assign write" on assignments for all to authenticated
   using (
-    lower(trim(auth.jwt()->>'email')) = 'michael.gaede@dsqv.de'
-    or lower(auth.jwt()->>'email') in (
+    app_is_admin()
+    or lower(trim(coalesce(auth.jwt()->>'email',''))) in (
       select lower(trim(email)) from referees where role = 'head' and coalesce(trim(email),'') <> ''
     )
   )
   with check (
-    lower(trim(auth.jwt()->>'email')) = 'michael.gaede@dsqv.de'
-    or lower(auth.jwt()->>'email') in (
+    app_is_admin()
+    or lower(trim(coalesce(auth.jwt()->>'email',''))) in (
       select lower(trim(email)) from referees where role = 'head' and coalesce(trim(email),'') <> ''
     )
   );
@@ -1920,8 +1955,10 @@ create policy "assign write" on assignments for all to authenticated
 --   create policy "read authenticated" on <table> for select to authenticated using (true);
 -- ------------------------------------------------------------
 
--- Roles: give a referee the head/referee office in the app (Settings ->
--- Referee database). Their login email MUST equal the referee's email.
+-- Roles: give a referee the admin/head/referee office in the app (Settings
+-- -> Referee database). Their login email MUST equal the referee's email.
+-- More admins: either set role='admin' on their referee record, or add their
+-- email to the OWNER LIST in app_is_admin() above (and to ADMIN_EMAILS in the app).
 -- Add users: Supabase dashboard -> Authentication -> Users -> "Add user".
 -- Prevent self sign-up: Authentication -> Providers -> Email ->
 -- turn off "Allow new users to sign up".`;
@@ -2088,9 +2125,10 @@ function currentRole(){
   if(VIEW_ONLY) return 'viewer';
   if(!state.user) return 'viewer';
   const email=(state.user.email||'').trim().toLowerCase();
-  if(email===ADMIN_EMAIL.trim().toLowerCase()) return 'admin';
+  if(isAdminEmail(email)) return 'admin';                        // 1) admins from config.js list
   const r=state.referees.find(x=>(x.email||'').trim().toLowerCase()===email && (x.email||'').trim());
-  if(r && r.role==='head') return 'head';
+  if(r && r.role==='admin') return 'admin';                      // 2) admins set in the referee database
+  if(r && r.role==='head')  return 'head';
   return r ? 'referee' : 'viewer';
 }
 function canManage(){ return currentRole()==='admin'; }           // settings, import, events, DB
